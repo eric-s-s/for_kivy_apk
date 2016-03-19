@@ -1,7 +1,6 @@
 # pylint: disable=no-member
 '''requires kivy and kivy garden graph'''
 from kivy.app import App
-from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -18,6 +17,9 @@ import graphing_and_printing as gap
 from longintmath import long_int_div as li_div
 
 from kivy.garden.graph import MeshLinePlot
+
+
+from kivy.core.window import Window
 
 #tools
 FLASH_DELAY = 0.5
@@ -109,10 +111,7 @@ class PlusMinusButton(FlashButton):
 class SizeButton(FlashButton):
     '''a button for sizing a die.  label is "D(diesize)" defaults to 1'''
     die_size = NumericProperty(1)
-# kv file line 26
-class WeightIt(Button):
-    '''just a DRY button.'''
-    pass
+
 # kv file line 30
 class WeightsPopup(Popup):
     '''the popup called when weighting a die'''
@@ -180,8 +179,16 @@ class PlotPopup(Popup):
                 y_tick_num = tick
                 break
         x_range[0] -= x_range[0] % x_tick_num
-        if x_tick_num > 999:
-            self.ids['graph'].font_size = 10
+        current = self.ids['graph'].font_size
+        factor = 1
+        if x_tick_num > 49: 
+            factor = 0.75
+        if x_tick_num > 99:
+            factor = 0.66
+        if x_tick_num > 499:
+            factor = 0.5
+
+        self.ids['graph'].font_size = int(factor * current)    
         self.ids['graph'].x_ticks_major = x_tick_num
         self.ids['graph'].y_ticks_major = y_tick_num
         self.ids['graph'].xmin = x_range[0]
@@ -192,7 +199,7 @@ class PlotPopup(Popup):
         '''created the dropdown menu that's called by 'legend' button'''
         for plot_obj in self._plot_list:
 
-            btn = ObjectButton(text=plot_obj.text, size_hint=(None, None), height=44,
+            btn = ObjectButton(text=plot_obj.text, size_hint=(None, None), height=80,
                                obj=plot_obj, color=plot_obj.color)
             btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
             self.legend.add_widget(btn)
@@ -202,10 +209,10 @@ class PlotPopup(Popup):
         self.legend.bind(on_dismiss=self.shrink_button)
     def shrink_button(self, event):
         '''make legend button small again after dismiss drop down'''
-        self.ids['legend'].width = 50
+        self.ids['legend'].width = self.ids['legend'].texture_size[0]
     def resize(self, *args):
         '''on release, resize drop down to fit widest button'''
-        widths = [50]
+        widths = [self.ids['legend'].texture_size[0]]
         for btn in self.legend.children[0].children:
             btn.width = btn.texture_size[0] + 10
             widths.append(btn.width)
@@ -266,11 +273,9 @@ class PageBox(BoxLayout):
         super(PageBox, self).__init__(**kwargs)
         self.pages = ['']
         self.current_page = 0
-        self.font_size = 15
-    def reset_sizes(self, f_size, ratios):
+    def reset_sizes(self, ratios):
         '''reset font_size = f_size,
         [title ratio, button ratio, text ratio] = ratios'''
-        self.ids['jump_to'].font_size = f_size
         self.ids['page_box_title'].size_hint_y = ratios[0]
         self.ids['buttons_container'].size_hint_y = ratios[1]
         self.ids['text_container'].size_hint_y = ratios[2]
@@ -286,16 +291,15 @@ class PageBox(BoxLayout):
         number = number % len(self.pages)
         self.current_page = number
         self.ids['text_container'].text = self.pages[number]
-        self.ids['text_container'].font_size = self.font_size
         self.ids['text_container'].text_size = self.ids['text_container'].size
         self.ids['jump_to'].text = str(number + 1)
-    def set_text(self, new_text, new_font_size, fudge_factor=0.65):
+    def set_text(self, new_text, fudge_factor=0.83):
         '''this sets the page box with a new text which it splits into pages
         according to lines_per_page = fudge_factor * box_height/font_size.
-        fudge_factor=0.65 work here, but it's set-able just in case.'''
-        self.font_size = new_font_size
-        page_height = self.height
-        lines_per_page = int(fudge_factor * page_height/ float(new_font_size))
+        fudge_factor=0.83 works here for spaces bewteen lines of text, but it's
+        set-able just in case.'''
+        lines_per_page = int(self.ids['text_container'].height * fudge_factor/
+                             float(self.ids['text_container'].font_size))
         def page_maker(text, line_limit):
             '''helper function.  splits a str into lst of strings according to
             line_limit.  adds enout \n to final string so all strings have same
@@ -386,8 +390,8 @@ class ChangeBox(GridLayout):
         dice_list = main().request_info('dice_list')
         self.clear_widgets()
         self.add_widget(Button(on_press=main().request_reset, text='reset table',
-                               font_size=20, size_hint=(1, None), height=60))
-        new_height = 70
+                               size_hint=(1, None), height=120))
+        new_height = 120
         if dice_list:
             new_height = min((self.height - 60) / len(dice_list), new_height)
         for die, number in dice_list:
@@ -420,6 +424,8 @@ class AddBox(BoxLayout):
             btn = SizeButton(die_size=number)
             btn.bind(on_press=self.assign_size_btn)
             self.ids['presets'].add_widget(btn)
+    def update(self):
+        self.ids['current'].text = main().request_info('table_str').replace('\n', ' \\ ')
     def assign_size_btn(self, btn):
         '''assigns the die size and die when a preset btn is pushed'''
         self.dictionary = {}
@@ -458,31 +464,35 @@ class AddBox(BoxLayout):
         self.add_it.assign_buttons(0, only_add=True, do_flash=True)
     def add_weights(self):
         '''opens the weightpopup and sizes accordingly'''
-        cell_size = 150
-        height = 620
-        padding = 10
-        cols_with_drag = ((self.die_size+2)//10 +1)
-        cols_without_drag = ((self.die_size)//10 +1)
-        width = cell_size * cols_without_drag
-        drag_it = Label(text='[b]DRAG\n====>[/b]', size_hint=(None, None),
-                        size=(100, 50), font_size=20, markup=True)
-        self.popup = WeightsPopup(height=min(main().height, height + padding * 8))
+        cols_within_frame = 3
+        col_width = int(self.width / cols_within_frame)
+        print 'col_width %s' % col_width
+        height = int(self.height*0.9)
+        #height = 620
+        add_drag = False
+        cols = ((self.die_size)//10 +1)
+        print 'cols %s' % cols
+        if cols > cols_within_frame:
+            cols = ((self.die_size+2)//10 +1)
+            add_drag = True
+            drag_it = Label(text='DRAG\n====>', bold=True)
+        sz_hint = (1.0/cols, 0.1)
+        self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width) , 
+                                  height=self.height)
         contents = self.popup.ids['contents']
-        if width < main().width:
-            self.popup.width = width + cols_without_drag * padding + 2 * padding
-            contents.width = width
-        else:
-            self.popup.width = main().width
-            contents.width = (cell_size + padding) * cols_with_drag + 2 * padding
-            contents.add_widget(drag_it)
-        contents.height = height
-        contents.add_widget(WeightIt(on_press=self.record_weights))
+        contents.size = (cols*col_width, height)
+        if add_drag:
+            drag_it.size_hint = sz_hint
+            contents.add_widget(drag_it)            
+            contents.add_widget(Button(on_press=self.record_weights, 
+                                       text= 'record\nweights', size_hint=sz_hint))
         for roll in range(1, self.die_size + 1):
-            slider = HorSlider(size_hint=(None, None), size=(150, 50))
+            slider = HorSlider(size_hint=sz_hint)
             slider.write_holder(roll)
             slider.write_label('weight for ' + str(roll))
             contents.add_widget(slider)
-        contents.add_widget(WeightIt(on_press=self.record_weights))
+        contents.add_widget(Button(on_press=self.record_weights, 
+                                   text= 'record\nweights', size_hint=sz_hint))
 
         self.popup.open()
     def record_weights(self, button):
@@ -505,7 +515,7 @@ class InfoBox(BoxLayout):
         super(InfoBox, self).__init__(**kwargs)
     def initialize(self):
         '''called at main app init. workaround for .kv file loading before .py'''
-        self.ids['weight_info'].reset_sizes(15, [0.1, 0.1, 0.8])
+        self.ids['weight_info'].reset_sizes([0.08, 0.1, 0.82])
         self.ids['weight_info'].set_title('full weight info')
     def update(self):
         '''updates all the info in box.'''
@@ -518,7 +528,7 @@ class InfoBox(BoxLayout):
 #        self.ids['weight_info'].height = (self.ids['weight_info'].size_hint[1] *
 #                                          main().current_tab.content.height)
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
-        self.ids['weight_info'].set_text(main().request_info('weights_info'), 15)
+        self.ids['weight_info'].set_text(main().request_info('weights_info'))
 # kv file line 269
 class GraphBox(BoxLayout):
     '''buttons for making graphs.  parent app is what's called for dice actions
@@ -625,7 +635,7 @@ class StatBox(BoxLayout):
             if not 'D' in line:
                 without_dice_str.append(line)
         without_dice_str.insert(2, 'in this set of dice.')
-        new_text = ('\n' + 12*' ').join(without_dice_str)
+        new_text = ('\n' + 20*' ').join(without_dice_str)
         self.ids['stat_text'].text = new_text
 # kv file line NONE
 class AllRollsBox(PageBox):
@@ -640,7 +650,7 @@ class AllRollsBox(PageBox):
         '''rewrites after dice change'''
 #        self.height = main().current_tab.content.height
         text = main().request_info('all_rolls')
-        self.set_text(text, 15)
+        self.set_text(text)
 
 # kv file line 390
 class DicePlatform(Carousel):
@@ -666,6 +676,7 @@ class DicePlatform(Carousel):
         self.ids['graph_box'].update()
         self.ids['all_rolls_box'].update()
         self.ids['info_box'].update()
+        self.ids['add_box'].update()
 
     def request_info(self, request):
         '''returns requested info to child widget'''
@@ -722,8 +733,13 @@ class DiceCarouselApp(App):
     '''the app.  it's the dice platform'''
     def build(self):
         current_app = DicePlatform()
-#        Window.size = (550, 800)
+        Window.size = (550, 800)
         return current_app
+    
+    def on_pause(self):
+        return True
+    def on_resume(self):
+        pass
 
 if __name__ == '__main__':
     to_run = DiceCarouselApp()

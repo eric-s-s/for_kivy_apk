@@ -4,13 +4,10 @@
 #tools
 <HorSlider>:
     BoxLayout:
+        padding_vertical: [5, 5]
         orientation:'vertical'
-        size_hint_x: None
-        width: 100
         Label:
-
             id:hor_title
-            font_size:15
         Slider:
             id:hor_slider
             orientation:'horizontal'
@@ -20,13 +17,9 @@
             step:1
         Label:
             text: str(int(hor_slider.value))
-            font_size:10
 <SizeButton>:
     text:'D' + str(self.die_size)
-<WeightIt>:
-    text:'record\nweights'
-    size_hint:None, None
-    size: 100, 50          
+         
 <WeightsPopup>:
     size_hint: None, None
     title: 'using weighted dice? for shame! cheater!'
@@ -37,9 +30,7 @@
             id: contents
             orientation: 'tb-lr'
             size_hint: None, None
-            spacing: 10
-            padding: 10
-            size:1000, 1000
+
 
 <PlotPopup>:
     title: 'click the legend button for legend.  click on a label to highlight that plot.'
@@ -64,7 +55,8 @@
             id: legend
             text:'legend'
             size_hint: None, 0.1
-            width: 50
+            width: self.texture_size[0]
+            padding_x: 10
             pos_hint: {'x': 0, 'y': 0.9}
            
 <PlotCheckBox>:
@@ -83,18 +75,18 @@
             width: self.texture_size[0]
 
 <PageBox>:
-    id:all_rolls
     orientation:'vertical'
     Label:
         id: page_box_title
         canvas:
             Color:
-                rgba: 1,0,0,0.5
+                rgba: 0.8,0,0,0.5
             Rectangle:
                 pos: self.pos
                 size: self.size
-        size_hint:1, .15
-        font_size: 20
+        size_hint:1, .04
+        halign: 'center'
+        valign: 'middle'
         text: 'TITLE'
         text_size:self.size
     BoxLayout:
@@ -141,12 +133,12 @@
     Label:
         canvas:
             Color:
-                rgba: 0,1,0,0.5
+                rgba: 0.4,0.8,0.8,0.3
             Rectangle:
                 pos: self.pos
                 size: self.size
         id:text_container
-        size_hint: 1, 0.8
+        size_hint: 1, 0.91
         text:''
         text_size: self.width, self.height
 
@@ -158,18 +150,22 @@
 #big boxes
 <ChangeBox>:
     Label: 
-        text: 'nothing added yet, use the "add" tab'
+        text: '\n\n\n\n\n\nno dice have been added yet.  swipe right to start.\n<===== swipe =====>'
         text_size:self.size
-        font_size: 25
         valign: 'top'
         halign: 'center'
 
 <AddBox>:
     id:bob
     orientation:'vertical'
+    Label:
+        id: current
+        size_hint: 1, 0.1
+        text: 'no dice yet'
+        text_size: self.size
     BoxLayout:
         id: custom
-        size_hint:1, 0.3
+        size_hint:1, 0.2
         spacing: 30
         padding: 30
         BoxLayout:
@@ -179,7 +175,6 @@
             Label:
                 size_hint: 1, None
                 text: 'type custom die size from 2-200'
-                font_size: 18
                 height: custom_size.height - custom_input.height
                 text_size: self.size
 
@@ -189,7 +184,6 @@
                 height: self.font_size + 10
                 input_filter:'int'
                 multiline:False
-                font_size: 20
                 on_text: root.assign_size_text()
                 border: 1,3,1,3
                 padding_y: 1,1
@@ -198,7 +192,6 @@
             size_hint: 0.5, 1
             text: 'make weights'
             text_size: self.size
-            font_size: 20
             halign: 'center'
             valign: 'middle'
             on_press: root.add_weights()
@@ -309,7 +302,6 @@
             id: table_info
             size_hint: 1, 0.2
             text: 'no dice yet'
-            font_size: 20
             text_size: self.size
             valign: 'middle'
             halign: 'center'
@@ -320,12 +312,12 @@
                 text:'value 1'
                 text_size: self.size
                 size_hint:0.25, 0.1
-                pos_hint: {'x': 0.1, 'y': 1}
+                pos_hint: {'x': 0.1, 'y': 0}
             Label:
                 size_hint:0.25, 0.1
                 text: 'value 2'
                 text_size: self.size
-                pos_hint: {'x': 0.5, 'y': 1}
+                pos_hint: {'x': 0.5, 'y': 0}
             #2nd row slider
             Slider:
                 id:start_slider
@@ -336,7 +328,7 @@
                 step:1
                 size_hint:0.25, 0.82
                 on_value:root.show_stats()
-                pos_hint: {'x': 0.2, 'y': 0.2}
+                pos_hint: {'x': 0.2, 'y': 0.0}
             Slider:
                 id:stop_slider
                 orientation:'vertical'
@@ -346,13 +338,13 @@
                 step:1
                 on_value:root.show_stats()
                 size_hint:0.25, 0.82
-                pos_hint: {'x': 0.6, 'y': 0.2}
+                pos_hint: {'x': 0.6, 'y': 0.0}
             #thrid row text input
             Label:
                 text:'may type\nin values'
                 text_size: self.size
                 size_hint:0.2, 0.15
-                pos_hint: {'x': 0.05, 'y': 0}
+                pos_hint: {'x': 0.01, 'y': 0.9}
             TextInput:
                 id:start_slider_text
                 input_filter:'int'
@@ -363,7 +355,7 @@
                 padding_y:1,1
                 font_size:(lambda:min(int(0.7 * self.height), int(0.3 * self.width)))()
                 size_hint:0.3, 0.15
-                pos_hint: {'x': 0.2, 'y': 0.0}
+                pos_hint: {'x': 0.2, 'y': 0.9}
             TextInput:
                 id:stop_slider_text
                 input_filter:'int'
@@ -374,12 +366,11 @@
                 border: 1,3,1,3
                 padding_y:1,1
                 font_size:(lambda:min(int(0.7 * self.height), int(0.3 * self.width)))()
-                pos_hint: {'x': 0.6, 'y': 0.0}
+                pos_hint: {'x': 0.6, 'y': 0.9}
         Label:
             id:stat_text
             text:'no stats'
             text_size:self.size
-            font_size: 20
             #size: self.texture_size
             size_hint: 1, 0.4
             valign:'top'
