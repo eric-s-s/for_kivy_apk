@@ -380,32 +380,26 @@
 #parent
 <DicePlatform>:
 
+    
+    ChangeBox:
+        id: change_box
+    
+    AddBox:
+        id: add_box
+   
+    GraphBox:
+        id: graph_box
+   
+    StatBox:
+        id: stat_box
+    
     BoxLayout:
-        text:'changer'
-        ChangeBox:
-            id: change_box
-    BoxLayout:
-        id: adder
-        text: 'add'
-        AddBox:
-            id: add_box
-    BoxLayout:
-        text: 'graph'
-        GraphBox:
-            id: graph_box
-    BoxLayout:
-        text: 'stats'
-        StatBox:
-            id: stat_box
-    BoxLayout:
-        text: 'info'
-        BoxLayout:
-            id: all_rolls_info
-            orientation: 'horizontal'
-            AllRollsBox:
-                id: all_rolls_box
-            InfoBox:
-                id: info_box
+        id: all_rolls_info
+        orientation: 'horizontal'
+        AllRollsBox:
+            id: all_rolls_box
+        InfoBox:
+            id: info_box
             
     
 
