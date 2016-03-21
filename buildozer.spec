@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = DiceTable Carousel
+title = please work2
 
 # (str) Package name
-package.name = dtcarousel
+package.name = plswk2
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test
@@ -25,7 +25,7 @@ source.include_exts = py,png,jpg,kv,atlas
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 0.1
+version = 0.2
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]
@@ -50,9 +50,6 @@ garden_requirements = graph
 
 # (str) Supported orientation (one of landscape, portrait or all)
 orientation = portrait
-
-# (list) List of service to declare
-#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
 
 #
 # OSX Specific
@@ -101,11 +98,6 @@ fullscreen = 1
 # (list) python-for-android whitelist
 #android.p4a_whitelist =
 
-# (bool) If True, then skip trying to update the Android sdk
-# This can be useful to avoid excess Internet downloads or save time
-# when an update is due and you just want to test/build your package
-# android.skip_update = False
-
 # (str) Android entry point, default is ok for Kivy-based app
 #android.entrypoint = org.renpy.android.PythonActivity
 
@@ -149,12 +141,6 @@ fullscreen = 1
 # (list) Android library project to add (will be added in the
 # project.properties automatically.)
 #android.library_references =
-
-# (str) Android logcat filters to use
-#android.logcat_filters = *:S python:D
-
-# (bool) Copy library instead of making a libpymodules.so
-#android.copy_libs = 1
 
 #
 # iOS specific

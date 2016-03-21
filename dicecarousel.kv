@@ -150,7 +150,7 @@
 #big boxes
 <ChangeBox>:
     Label: 
-        text: '\n\n\n\n\n\nno dice have been added yet.  swipe right to start.\n<===== swipe =====>'
+        text: 'no dice have been added yet.  swipe right to start.\n<===== swipe =====>'
         text_size:self.size
         valign: 'top'
         halign: 'center'
@@ -379,24 +379,23 @@
 
 #parent
 <DicePlatform>:
-
-    
     ChangeBox:
         id: change_box
-    
+        size_hint: 1,1
     AddBox:
         id: add_box
-   
+        size_hint: 1,1
     GraphBox:
         id: graph_box
-   
+        size_hint: 1,1
     StatBox:
         id: stat_box
-    
+        size_hint: 1,1
     BoxLayout:
         id: all_rolls_info
+        size_hint: 1,1
         orientation: 'horizontal'
-        AllRollsBox:
+	    AllRollsBox:
             id: all_rolls_box
         InfoBox:
             id: info_box

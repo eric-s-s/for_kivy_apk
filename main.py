@@ -466,21 +466,20 @@ class AddBox(BoxLayout):
         '''opens the weightpopup and sizes accordingly'''
         cols_within_frame = 3
         col_width = int(self.width / cols_within_frame)
-        print 'col_width %s' % col_width
-        height = int(self.height*0.9)
+        height = int(self.height*0.8)
         #height = 620
         add_drag = False
         cols = ((self.die_size)//10 +1)
-        print 'cols %s' % cols
         if cols > cols_within_frame:
             cols = ((self.die_size+2)//10 +1)
             add_drag = True
             drag_it = Label(text='DRAG\n====>', bold=True)
+        
         sz_hint = (1.0/cols, 0.1)
         self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width) , 
                                   height=self.height)
         contents = self.popup.ids['contents']
-        contents.size = (cols*col_width, height)
+        contents.size = (cols*col_width*0.9, height)
         if add_drag:
             drag_it.size_hint = sz_hint
             contents.add_widget(drag_it)            
@@ -528,7 +527,8 @@ class InfoBox(BoxLayout):
 #        self.ids['weight_info'].height = (self.ids['weight_info'].size_hint[1] *
 #                                          main().current_tab.content.height)
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
-        self.ids['weight_info'].set_text(main().request_info('weights_info'))
+        to_set = main().request_info('weights_info').replace('a roll of', '')
+        self.ids['weight_info'].set_text(to_set)
 # kv file line 269
 class GraphBox(BoxLayout):
     '''buttons for making graphs.  parent app is what's called for dice actions
@@ -635,7 +635,7 @@ class StatBox(BoxLayout):
             if not 'D' in line:
                 without_dice_str.append(line)
         without_dice_str.insert(2, 'in this set of dice.')
-        new_text = ('\n' + 20*' ').join(without_dice_str)
+        new_text = ('\n' + 15*' ').join(without_dice_str)
         self.ids['stat_text'].text = new_text
 # kv file line NONE
 class AllRollsBox(PageBox):
@@ -646,6 +646,7 @@ class AllRollsBox(PageBox):
         super(AllRollsBox, self).__init__(**kwargs)
     def initialize(self):
         self.set_title('here are all the rolls and their frequency')
+        self.ids['page_box_title'].font_size *= 0.75
     def update(self):
         '''rewrites after dice change'''
 #        self.height = main().current_tab.content.height
@@ -660,7 +661,7 @@ class DicePlatform(Carousel):
         self._table = ds.DiceTable()
         self.direction = 'right'
         self.loop = 'true'
-        self.scroll_timeout = 120
+        #self.scroll_timeout = 120
         self.initializer()
     def initializer(self):
         '''initializes various values that couldn't be written before both .py
@@ -733,7 +734,7 @@ class DiceCarouselApp(App):
     '''the app.  it's the dice platform'''
     def build(self):
         current_app = DicePlatform()
-        Window.size = (550, 800)
+
         return current_app
     
     def on_pause(self):
