@@ -3,6 +3,7 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.stacklayout import StackLayout
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
@@ -112,6 +113,49 @@ class SizeButton(FlashButton):
     '''a button for sizing a die.  label is "D(diesize)" defaults to 1'''
     die_size = NumericProperty(1)
 
+class NumberPad(StackLayout):
+    def __init__(self, **kwargs):
+        super(NumberPad, self).__init__(**kwargs)
+        self.orientation = 'lr-tb'
+        self.input_num = ''
+        for digit in range(1, 10):
+            self.add_widget(Button(text = str(digit), size_hint=(0.33, 0.25), 
+                                   on_press=self.add_digit))
+        self.add_widget(Button(text='BS', size_hint=(0.33, 0.25), 
+                               on_press=self.back_space))
+        self.add_widget(Button(text='0', size_hint=(0.33, 0.25),
+                               on_press=self.add_digit))
+        self.enter_btn = Button(text='ENTER', size_hint=(0.33, 0.25))
+        self.add_widget(self.enter_btn)
+    def add_digit(self, button):
+        self.input_num = self.input_num + button.text
+    def back_space(self, button):
+        self.input_num = self.input_num[:-1]
+class NumberInput(Button):
+    def __init__(self, **kwargs):
+        super(NumberInput, self).__init__(**kwargs)
+        self.num_pad = DropDown(dismiss_on_select=False, auto_width=False, width=300)
+        self.text=''
+        self.pad = NumberPad(size_hint=(None, None), size=(300, 300))
+        for button in self.pad.children[:]:
+            if button.text.isdigit() or button.text == 'BS':
+                button.bind(on_release=lambda btn:self.num_pad.select(self.pad.input_num))
+        self.pad.enter_btn.bind(on_release=self.enter_val)
+        self.num_pad.add_widget(self.pad)
+        self.bind(on_release=self.open_pad)
+        self.num_pad.bind(on_select=lambda instance, x: setattr(self, 'text', x))
+    def open_pad(self, *args):
+        self.pad.input_num = ''
+        self.set_size()
+        self.num_pad.open(self)
+    def enter_val(self, *args):
+        self.num_pad.dismiss()
+    def set_size(self):
+        dimension = main().width/3
+        self.num_pad.width = dimension
+        self.pad.size = (dimension, dimension)
+        
+        
 # kv file line 30
 class WeightsPopup(Popup):
     '''the popup called when weighting a die'''
@@ -199,8 +243,8 @@ class PlotPopup(Popup):
         '''created the dropdown menu that's called by 'legend' button'''
         for plot_obj in self._plot_list:
 
-            btn = ObjectButton(text=plot_obj.text, size_hint=(None, None), height=80,
-                               obj=plot_obj, color=plot_obj.color)
+            btn = ObjectButton(text=plot_obj.text, size_hint=(None, None),
+                               height=80, obj=plot_obj, color=plot_obj.color)
             btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
             self.legend.add_widget(btn)
         self.legend.on_select = self.flash_plot
@@ -389,11 +433,13 @@ class ChangeBox(GridLayout):
 #        self.height = main().current_tab.content.height
         dice_list = main().request_info('dice_list')
         self.clear_widgets()
-        self.add_widget(Button(on_press=main().request_reset, text='reset table',
-                               size_hint=(1, None), height=120))
-        new_height = 120
+        max_height = self.height/10
+        reset = Button(on_press=main().request_reset, text='reset table',
+                       size_hint=(1, None), height=1.5*max_height)
+        self.add_widget(reset)
         if dice_list:
-            new_height = min((self.height - 60) / len(dice_list), new_height)
+            new_height = min((self.height - reset.height) / len(dice_list),
+                              max_height)
         for die, number in dice_list:
             if (die, number) in self.old_dice_list:
                 changed = False
@@ -416,7 +462,6 @@ class AddBox(BoxLayout):
 
         self.add_it = AddRmDice(ds.Die(6), size_hint=(1, 1))
         self.add_it.assign_buttons(0, only_add=True, do_flash=True)
-        #self.pack()
     def initialize(self):
         '''how the box is packed'''
         self.ids['add_it'].add_widget(self.add_it)
@@ -425,7 +470,8 @@ class AddBox(BoxLayout):
             btn.bind(on_press=self.assign_size_btn)
             self.ids['presets'].add_widget(btn)
     def update(self):
-        self.ids['current'].text = main().request_info('table_str').replace('\n', ' \\ ')
+        self.ids['current'].text = (main().request_info('table_str').
+                                    replace('\n', ' \\ '))
     def assign_size_btn(self, btn):
         '''assigns the die size and die when a preset btn is pushed'''
         self.dictionary = {}
@@ -546,13 +592,16 @@ class GraphBox(BoxLayout):
         new_string = main().request_info('table_str').replace('\n', ' \\ ')
         self.plot_current = PlotObject(text=new_string)
         self.ids['graph_space'].clear_widgets()
-        self.ids['graph_space'].add_widget(Label(text='past graphs', size_hint=(1, 0.1)))
+        self.ids['graph_space'].add_widget(Label(text='past graphs', 
+                                                 size_hint=(1, 0.1)))
         for item in self.plot_history[::-1]:
             check = PlotCheckBox(text=item.text, size_hint=(1, 0.1), active=False)
             check.two_line_text('\\')
             self.ids['graph_space'].add_widget(check)
-        self.ids['graph_space'].add_widget(Label(text='new table', size_hint=(1, 0.1)))
-        check = PlotCheckBox(text=self.plot_current.text, size_hint=(1, 0.1), active=True)
+        self.ids['graph_space'].add_widget(Label(text='new table',
+                                                 size_hint=(1, 0.1)))
+        check = PlotCheckBox(text=self.plot_current.text, size_hint=(1, 0.1),
+                             active=True)
         check.two_line_text('\\')
         self.ids['graph_space'].add_widget(check)
     def graph_it(self):
@@ -593,9 +642,18 @@ class StatBox(BoxLayout):
     def __init__(self, **kwargs):
         super(StatBox, self).__init__(**kwargs)
         self.text_lines = 1
-
+        
+    def initialize(self):
+        self.ids['start_slider_text'].num_pad.bind(
+            on_dismiss=lambda btn: self.assign_text_value('start')
+            )
+        self.ids['stop_slider_text'].num_pad.bind(
+            on_dismiss=lambda btn: self.assign_text_value('stop')
+            )
     def update(self):
         '''called when dice list changes.'''
+        #self.ids['start_slider_text'].num_pad.width=self.width/3
+        #self.ids['start_slider_text'].pad.width=self.width/3
         val_min, val_max = main().request_info('range')
         self.ids['stop_slider'].min = val_min
         self.ids['start_slider'].min = val_min
@@ -620,6 +678,10 @@ class StatBox(BoxLayout):
                 val_new = int(change_str)
             self.ids[box+'_slider'].value = val_new
             self.ids[box + '_slider_text'].text = str(val_new)
+        else:
+            self.ids[box + '_slider_text'].text = str(
+                int(self.ids[box+'_slider'].value)
+                )
         self.show_stats()
 
     def show_stats(self):
@@ -670,6 +732,7 @@ class DicePlatform(Carousel):
         self.ids['graph_box'].initialize()
         self.ids['info_box'].initialize()
         self.ids['all_rolls_box'].initialize()
+        self.ids['stat_box'].initialize()
     def updater(self):
         '''updates appropriate things for any die add or remove'''
         self.ids['change_box'].update()
