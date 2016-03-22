@@ -6,6 +6,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.stacklayout import StackLayout
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
+from kivy.uix.modalview import ModalView
 from kivy.uix.label import Label
 from kivy.uix.dropdown import DropDown
 from kivy.properties import (NumericProperty, ListProperty, StringProperty,
@@ -19,8 +20,6 @@ from longintmath import long_int_div as li_div
 
 from kivy.garden.graph import MeshLinePlot
 
-
-from kivy.core.window import Window
 
 #tools
 FLASH_DELAY = 0.5
@@ -113,47 +112,45 @@ class SizeButton(FlashButton):
     '''a button for sizing a die.  label is "D(diesize)" defaults to 1'''
     die_size = NumericProperty(1)
 
-class NumberPad(StackLayout):
-    def __init__(self, **kwargs):
-        super(NumberPad, self).__init__(**kwargs)
-        self.orientation = 'lr-tb'
-        self.input_num = ''
-        for digit in range(1, 10):
-            self.add_widget(Button(text = str(digit), size_hint=(0.33, 0.25), 
-                                   on_press=self.add_digit))
-        self.add_widget(Button(text='BS', size_hint=(0.33, 0.25), 
-                               on_press=self.back_space))
-        self.add_widget(Button(text='0', size_hint=(0.33, 0.25),
-                               on_press=self.add_digit))
-        self.enter_btn = Button(text='ENTER', size_hint=(0.33, 0.25))
-        self.add_widget(self.enter_btn)
-    def add_digit(self, button):
-        self.input_num = self.input_num + button.text
-    def back_space(self, button):
-        self.input_num = self.input_num[:-1]
 class NumberInput(Button):
+    number_val = StringProperty('')
     def __init__(self, **kwargs):
         super(NumberInput, self).__init__(**kwargs)
-        self.num_pad = DropDown(dismiss_on_select=False, auto_width=False, width=300)
+        pad = StackLayout(orientation='lr-tb')
+        for digit in range(1, 10):
+            pad.add_widget(Button(text = str(digit), size_hint=(0.33, 0.25), 
+                                   on_press=self.add_digit))
+        pad.add_widget(Button(text='BS', size_hint=(0.33, 0.25), 
+                               on_press=self.back_space))
+        pad.add_widget(Button(text='0', size_hint=(0.33, 0.25),
+                               on_press=self.add_digit))
+        pad.add_widget(Button(text='ENT', size_hint=(0.33, 0.25),
+                               on_press=self.enter_val))
+        self.num_pad = Popup(title='', content=pad, size_hint=(0.8,0.5), 
+                             pos_hint={'x':0.1, 'y':0})
         self.text=''
-        self.pad = NumberPad(size_hint=(None, None), size=(300, 300))
-        for button in self.pad.children[:]:
-            if button.text.isdigit() or button.text == 'BS':
-                button.bind(on_release=lambda btn:self.num_pad.select(self.pad.input_num))
-        self.pad.enter_btn.bind(on_release=self.enter_val)
-        self.num_pad.add_widget(self.pad)
+        self.background_color = (0.4, 0.2, 1.0, 0.5)
         self.bind(on_release=self.open_pad)
-        self.num_pad.bind(on_select=lambda instance, x: setattr(self, 'text', x))
-    def open_pad(self, *args):
-        self.pad.input_num = ''
-        self.set_size()
+        
+    def add_digit(self, btn):
+        if self.num_pad.title == ' ':
+            self.num_pad.title = btn.text
+        else:
+            self.num_pad.title += btn.text      
+    def back_space(self, btn):
+        if self.num_pad.title != ' ':
+            if self.num_pad.title[:-1]:
+                self.num_pad.title = self.num_pad.title[:-1]
+            else:
+                self.num_pad.title = ' '       
+    def open_pad(self, btn):
         self.num_pad.open(self)
-    def enter_val(self, *args):
+        self.num_pad.title=' '
+        self.num_pad.title_size = self.num_pad.height/8
+    def enter_val(self, btn):
         self.num_pad.dismiss()
-    def set_size(self):
-        dimension = main().width/3
-        self.num_pad.width = dimension
-        self.pad.size = (dimension, dimension)
+        self.text = self.num_pad.title
+        self.number_val = self.num_pad.title
         
         
 # kv file line 30
@@ -192,9 +189,9 @@ class PlotPopup(Popup):
         self.make_legend()
     def make_graph(self):
         '''makes a graph and plots'''
-        colors = [[0, 0.2, 1, 1], [0.2, 1.0, 0, 1], [0.8, 1.0, 0.1, 1],
+        colors = [[0.2, 1.0, 0, 1], [0.8, 1.0, 0.1, 1],
                   [1, 0.4, 0.2, 1], [1, 0.8, 0, 1], [0.6, 0, 0.8, 1],
-                  [1, 0, 0.2, 1]]
+                  [1, 0, 0.2, 1], [0, 0.2, 1, 1]]
         color_count = 0
         x_mins = []
         x_maxs = []
@@ -206,7 +203,7 @@ class PlotPopup(Popup):
             color_count = (color_count + 1) % len(colors)
             plot_obj.color = new_color
             self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts,
-                                                    color=new_color))
+                                                    color=new_color, mode='triangle_fan'))
             x_mins.append(plot_obj.x_min)
             x_maxs.append(plot_obj.x_max)
             y_maxs.append(plot_obj.y_max)
@@ -239,6 +236,7 @@ class PlotPopup(Popup):
         self.ids['graph'].ymin = -y_tick_num
         self.ids['graph'].xmax = x_range[1]
         self.ids['graph'].ymax = y_range[1]
+
     def make_legend(self):
         '''created the dropdown menu that's called by 'legend' button'''
         for plot_obj in self._plot_list:
@@ -326,6 +324,7 @@ class PageBox(BoxLayout):
     def set_title(self, title):
         '''title is a string'''
         self.ids['page_box_title'].text = title
+        
     def text_check(self, text):
         '''passes text input to show_page'''
         if text:
@@ -435,7 +434,7 @@ class ChangeBox(GridLayout):
         self.clear_widgets()
         max_height = self.height/10
         reset = Button(on_press=main().request_reset, text='reset table',
-                       size_hint=(1, None), height=1.5*max_height)
+                       size_hint=(1, None), height=0.75*max_height)
         self.add_widget(reset)
         if dice_list:
             new_height = min((self.height - reset.height) / len(dice_list),
@@ -464,6 +463,9 @@ class AddBox(BoxLayout):
         self.add_it.assign_buttons(0, only_add=True, do_flash=True)
     def initialize(self):
         '''how the box is packed'''
+        #self.ids['custom_input'].num_pad.bind(
+        #    on_dismiss=lambda btn: self.assign_size_text()
+        #    )
         self.ids['add_it'].add_widget(self.add_it)
         for number in [2, 4, 6, 8, 10, 12, 20, 100]:
             btn = SizeButton(die_size=number)
@@ -477,19 +479,21 @@ class AddBox(BoxLayout):
         self.dictionary = {}
         self.die_size = btn.die_size
         self.assign_die()
-    def assign_size_text(self):
+    def assign_size_text(self, text):
         '''asigns the die size and die when text is entered'''
         self.dictionary = {}
         top = 200
         bottom = 2
-        int_string = self.ids['custom_input'].text
+        int_string = text
         if int_string:
-            self.die_size = int(self.ids['custom_input'].text)
+            self.die_size = int(text)
             if self.die_size < bottom:
                 self.die_size = bottom
             if self.die_size > top:
                 self.die_size = top
-            self.assign_die()
+        if text != str(self.die_size):
+            self.ids['custom_input'].text = str(self.die_size)
+        self.assign_die()
     def assign_mod(self):
         '''assigns a die modifier and new die when slider is moved'''
         self.mod = int(self.ids['modifier'].value)
@@ -512,7 +516,6 @@ class AddBox(BoxLayout):
         '''opens the weightpopup and sizes accordingly'''
         cols_within_frame = 3
         col_width = int(self.width / cols_within_frame)
-        height = int(self.height*0.8)
         #height = 620
         add_drag = False
         cols = ((self.die_size)//10 +1)
@@ -525,6 +528,8 @@ class AddBox(BoxLayout):
         self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width) , 
                                   height=self.height)
         contents = self.popup.ids['contents']
+        
+        height = int(self.height* 0.9)
         contents.size = (cols*col_width*0.9, height)
         if add_drag:
             drag_it.size_hint = sz_hint
@@ -643,17 +648,8 @@ class StatBox(BoxLayout):
         super(StatBox, self).__init__(**kwargs)
         self.text_lines = 1
         
-    def initialize(self):
-        self.ids['start_slider_text'].num_pad.bind(
-            on_dismiss=lambda btn: self.assign_text_value('start')
-            )
-        self.ids['stop_slider_text'].num_pad.bind(
-            on_dismiss=lambda btn: self.assign_text_value('stop')
-            )
     def update(self):
         '''called when dice list changes.'''
-        #self.ids['start_slider_text'].num_pad.width=self.width/3
-        #self.ids['start_slider_text'].pad.width=self.width/3
         val_min, val_max = main().request_info('range')
         self.ids['stop_slider'].min = val_min
         self.ids['start_slider'].min = val_min
@@ -677,18 +673,15 @@ class StatBox(BoxLayout):
             else:
                 val_new = int(change_str)
             self.ids[box+'_slider'].value = val_new
-            self.ids[box + '_slider_text'].text = str(val_new)
-        else:
-            self.ids[box + '_slider_text'].text = str(
-                int(self.ids[box+'_slider'].value)
-                )
+            
         self.show_stats()
 
     def show_stats(self):
         '''the main function. displays stats of current slider values.'''
         val_1 = int(self.ids['stop_slider'].value)
         val_2 = int(self.ids['start_slider'].value)
-
+        self.ids['stop_slider_text'].text = str(val_1)
+        self.ids['start_slider_text'].text = str(val_2)
         stat_list = range(min(val_1, val_2), max(val_1, val_2) + 1)
         new_text = '\n' + main().request_stats(stat_list).replace(' possible', '')
         text_lines = new_text.split('\n')
@@ -711,7 +704,6 @@ class AllRollsBox(PageBox):
         self.ids['page_box_title'].font_size *= 0.75
     def update(self):
         '''rewrites after dice change'''
-#        self.height = main().current_tab.content.height
         text = main().request_info('all_rolls')
         self.set_text(text)
 
@@ -732,7 +724,6 @@ class DicePlatform(Carousel):
         self.ids['graph_box'].initialize()
         self.ids['info_box'].initialize()
         self.ids['all_rolls_box'].initialize()
-        self.ids['stat_box'].initialize()
     def updater(self):
         '''updates appropriate things for any die add or remove'''
         self.ids['change_box'].update()
