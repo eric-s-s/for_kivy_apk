@@ -17,7 +17,7 @@ from kivy.uix.carousel import Carousel
 import dicestats as ds
 import graphing_and_printing as gap
 from longintmath import long_int_div as li_div
-
+from itertools import cycle as itertools_cycle
 from kivy.garden.graph import MeshLinePlot
 
 
@@ -113,25 +113,30 @@ class SizeButton(FlashButton):
     die_size = NumericProperty(1)
 
 class NumberInput(Button):
-    number_val = StringProperty('')
+    number_val = StringProperty('0')
     def __init__(self, **kwargs):
         super(NumberInput, self).__init__(**kwargs)
         pad = StackLayout(orientation='lr-tb')
+        texts = itertools_cycle(['+', '-', '='])
         for digit in range(1, 10):
-            pad.add_widget(Button(text = str(digit), size_hint=(0.33, 0.25), 
+            pad.add_widget(Button(text=str(digit), size_hint=(0.30, 0.25), 
                                    on_press=self.add_digit))
-        pad.add_widget(Button(text='BS', size_hint=(0.33, 0.25), 
+            if digit % 3 ==0:
+                pad.add_widget(Button(text=next(texts), size_hint=(0.1, 0.25), 
+                               on_press=self.plus_minus))
+        pad.add_widget(Button(text='BS', size_hint=(0.30, 0.25), 
                                on_press=self.back_space))
-        pad.add_widget(Button(text='0', size_hint=(0.33, 0.25),
+        pad.add_widget(Button(text='0', size_hint=(0.30, 0.25),
                                on_press=self.add_digit))
-        pad.add_widget(Button(text='ENT', size_hint=(0.33, 0.25),
+        pad.add_widget(Button(text='ENT', size_hint=(0.40, 0.25),
                                on_press=self.enter_val))
         self.num_pad = Popup(title='', content=pad, size_hint=(0.8,0.5), 
                              pos_hint={'x':0.1, 'y':0})
         self.text=''
         self.background_color = (0.4, 0.2, 1.0, 0.5)
         self.bind(on_release=self.open_pad)
-        
+        self.to_add = 0
+        self.sign = 1
     def add_digit(self, btn):
         if self.num_pad.title == ' ':
             self.num_pad.title = btn.text
@@ -144,13 +149,27 @@ class NumberInput(Button):
             else:
                 self.num_pad.title = ' '       
     def open_pad(self, btn):
+        self.to_add = 0
+        self.sign = 1
         self.num_pad.open(self)
         self.num_pad.title=' '
         self.num_pad.title_size = self.num_pad.height/8
+    def plus_minus(self, btn):
+        if self.num_pad.title != ' ':
+            self.to_add += int(self.num_pad.title) * self.sign
+        if btn.text == '-':
+            self.sign = -1
+        if btn.text == '=':
+            self.num_pad.title = str(self.to_add)
+            self.to_add = 0
+            self.sign = 1 
+        else:
+            self.num_pad.title = ' '
     def enter_val(self, btn):
         self.num_pad.dismiss()
-        self.text = self.num_pad.title
-        self.number_val = self.num_pad.title
+        if self.num_pad.title != ' ':
+            self.text = self.num_pad.title
+            self.number_val = self.num_pad.title
         
         
 # kv file line 30
