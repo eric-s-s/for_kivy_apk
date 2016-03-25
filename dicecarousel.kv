@@ -19,7 +19,7 @@
             text: str(int(hor_slider.value))
 <SizeButton>:
     text:'D' + str(self.die_size)
-         
+
 <WeightsPopup>:
     size_hint: None, None
     title: ''
@@ -35,20 +35,23 @@
 
 <PlotPopup>:
     title: 'click the legend button for legend.  click on a label to highlight that plot.'
-    ScatterLayout:
-        id: graph_container
-        do_rotation: False
-        size_hint: 1,1    
-        Graph:
-            id: graph
-            xlabel: 'the rolls'
-            ylabel: 'percent chance'
-            y_grid_label: True
-            x_grid_label: True
-            x_grid: True
-            y_grid: True
-            x_ticks_major: 2
-            y_ticks_major: 1 
+    FloatLayout:    
+        
+        ScatterLayout:
+            id: graph_container
+            auto_bring_to_front: False
+            do_rotation: False
+            size_hint: 1,1
+            Graph:
+                id: graph
+                xlabel: 'the rolls'
+                ylabel: 'percent chance'
+                y_grid_label: True
+                x_grid_label: True
+                x_grid: True
+                y_grid: True
+                x_ticks_major: 2
+                y_ticks_major: 1
         Button:
             text:'done'
             size_hint: 0.1, 0.1
@@ -56,10 +59,10 @@
         Button:
             id: legend
             text:'legend'
-            size_hint: None, 0.1
+            size_hint: None, 0.07
             width: self.texture_size[0]
             padding_x: 10
-            pos_hint: {'x': 0, 'y': 0.9}  
+            pos_hint: {'x': 0, 'y': 0.9}
 <PlotCheckBox>:
     orientation: 'horizontal'
     CheckBox:
@@ -109,11 +112,11 @@
             id:jump_to
             size_hint: 0.25, 1
             on_number_val: root.text_check(self.text)
-            
+
         Label:
             id:page_total
             size_hint: 0.25, 1
-            
+
             font_size: (lambda:min(int(0.7 * self.height), int(0.35 * self.width)))()
         Button:
             id:go_right
@@ -145,12 +148,12 @@
 
 #big boxes
 <ChangeBox>:
-    Label: 
+    Label:
         text: 'no dice have been added yet.  swipe right to start.\n<===== swipe =====>'
         text_size:self.size
         valign: 'top'
         halign: 'center'
-    
+
 
 <AddBox>:
     id:bob
@@ -172,21 +175,21 @@
             Label:
                 size_hint: 1, 0.6
                 text: 'type custom die size from 2-200'
-                
+
                 text_size: self.size
 
             NumberInput:
                 id:custom_input
                 size_hint: 1, 0.4
                 on_number_val: root.assign_size_text(self.text)
-        Button:
+        FlashButton:
             id:make_weights
             size_hint: 0.5, 1
             text: 'make weights'
             text_size: self.size
             halign: 'center'
             valign: 'middle'
-            on_press: root.add_weights()
+            on_press: self.delay(root.add_weights)
     BoxLayout:
         id: size_mod
         orientation: 'horizontal'
@@ -259,7 +262,7 @@
         size_hint: 1, 0.9
     BoxLayout:
         size_hint: 1, 0.1
-        Button:
+        FlashButton:
             id: graph_stuff
             text: 'graph it'
             text_size: self.size
@@ -267,7 +270,7 @@
             size_hint: 0.33, 1
             halign: 'center'
             valign: 'middle'
-            on_press: root.graph_it()
+            on_press: self.delay(root.graph_it)
         Button:
             id: clear_all
             text: 'clear history'
@@ -276,7 +279,7 @@
             size_hint: 0.33, 1
             halign: 'center'
             valign: 'middle'
-            on_press: root.clear_all()    
+            on_press: root.clear_all()
         Button:
             id: clear_selected
             text: 'clear selected'
@@ -381,7 +384,7 @@
             id: all_rolls_box
         InfoBox:
             id: info_box
-            
-    
+
+
 
 

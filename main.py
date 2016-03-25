@@ -1,4 +1,4 @@
-# pylint: disable=no-member
+# pylint: disable=no-member, unused-argument, no-name-in-module
 '''requires kivy and kivy garden graph'''
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -6,7 +6,6 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.stacklayout import StackLayout
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
-from kivy.uix.modalview import ModalView
 from kivy.uix.label import Label
 from kivy.uix.dropdown import DropDown
 from kivy.properties import (NumericProperty, ListProperty, StringProperty,
@@ -28,23 +27,27 @@ def main():
     '''gets the current diceplatform so all can call it'''
     return App.get_running_app().root
 
-def add(number, die, *args):
-    '''delay after call because otherwise button press won't be shown before
-    button gets erased and rewritten'''
-    Clock.schedule_once(lambda dt: delayed_add(number, die, *args), FLASH_DELAY)
-def delayed_add(number, die, *args):
-    '''see add'''
-    main().request_add(number, die)
 
-def remove(number, die, *args):
-    '''for delay. same as add'''
-    Clock.schedule_once(lambda dt: delayed_remove(number, die, *args), FLASH_DELAY)
-def delayed_remove(number, die, *args):
-    '''see remove'''
-    main().request_remove(number, die)
+
+#def add(number, die, *args):
+#    '''delay after call because otherwise button press won't be shown before
+#    button gets erased and rewritten'''
+#    Clock.schedule_once(lambda dt: delayed_add(number, die, *args), FLASH_DELAY)
+#def delayed_add(number, die, *args):
+#    '''see add'''
+#    main().request_add(number, die)
+#
+#def remove(number, die, *args):
+#    '''for delay. same as add'''
+#    Clock.schedule_once(lambda dt: delayed_remove(number, die, *args), FLASH_DELAY)
+#def delayed_remove(number, die, *args):
+#    '''see remove'''
+#    main().request_remove(number, die)
 
 
 # kv file line 5
+
+        
 class HorSlider(BoxLayout):
     '''a slider of set size that displays it's number and stores a holder for
     future reference (used here to get roll numbers on die weights)'''
@@ -70,8 +73,12 @@ class FlashButton(Button):
     done taht press real clear-like'''
     def __init__(self, **kwargs):
         super(FlashButton, self).__init__(**kwargs)
-        self.bind(on_press=self.long_press)
-    def long_press(self, *args):
+        #self.bind(on_press=self.long_press)
+    def delay(self, function, *args):
+        '''delays a function call so that button has time to flash.  use with
+        on_press=self.delay(function, function_args)'''
+        Clock.schedule_once(lambda dt: function(*args), FLASH_DELAY)
+    def on_press(self, *args):
         '''sets background to flash on press'''
         self.color = [1, 0, 0, 1]
         self.background_color = [0.2, 0.2, 1, 1]
@@ -107,54 +114,97 @@ class PlusMinusButton(FlashButton):
         super(PlusMinusButton, self).__init__(**kwargs)
         self.number = number
         self.text = '{:+}'.format(self.number)
-# kv file line 24
+# kv file line 20
 class SizeButton(FlashButton):
     '''a button for sizing a die.  label is "D(diesize)" defaults to 1'''
     die_size = NumericProperty(1)
 
+# kv file line NONE
+class NumberSelect(Button):
+    number_value = NumericProperty(0)
+    place_hold = NumericProperty(0)
+    title = StringProperty('')
+    def __init__(self, start, stop, **kwargs):
+        super(NumberSelect, self).__init__(**kwargs)
+        #pad_contents = StackLayout(orientation='lr-tb', size_hint_y=None, height=self.width)
+        pad_contents = StackLayout(orientation='lr-tb')
+        the_range = range(start, stop+1)
+        y_hint_ = 0.01* int(100 /(1 + len(the_range)//3))
+        for number in the_range:
+            
+            pad_contents.add_widget(Button(text=str(number), 
+                                           size_hint=(0.33, y_hint_), 
+                                           on_press=self.record_number))
+        self.pad = Popup(title='', content=pad_contents, size_hint=(0.8, 0.5),
+                         pos_hint={'x':0.1, 'y':0}, title_align='center')
+         
+        #self.pad = DropDown()
+        #self.pad.add_widget(pad_contents)
+       
+        
+        self.background_color = (0.4, 0.2, 1.0, 0.5)
+        self.bind(on_release=self.pad.open)
+        self.bind(title = self.set_text)
+        self.bind(number_value = self.set_text)
+        self.halign='center'
+    def set_text(self, instance, text):
+        self.text = self.title + '\n%s' % self.number_value
+        self.pad.title = self.title
+    def record_number(self, btn):
+        #self.text = self.text.replace('\n%s' % self.number_value, '\n' + btn.text)
+        self.number_value = int(btn.text)
+        self.pad.dismiss()
+        
 class NumberInput(Button):
+    '''a button that opens a number pad for input. fire input events using
+    on_number_val'''
     number_val = StringProperty('0')
     def __init__(self, **kwargs):
         super(NumberInput, self).__init__(**kwargs)
         pad = StackLayout(orientation='lr-tb')
         texts = itertools_cycle(['+', '-', '='])
         for digit in range(1, 10):
-            pad.add_widget(Button(text=str(digit), size_hint=(0.30, 0.25), 
-                                   on_press=self.add_digit))
-            if digit % 3 ==0:
-                pad.add_widget(Button(text=next(texts), size_hint=(0.1, 0.25), 
-                               on_press=self.plus_minus))
-        pad.add_widget(Button(text='BS', size_hint=(0.30, 0.25), 
-                               on_press=self.back_space))
-        pad.add_widget(Button(text='0', size_hint=(0.30, 0.25),
-                               on_press=self.add_digit))
-        pad.add_widget(Button(text='ENT', size_hint=(0.40, 0.25),
-                               on_press=self.enter_val))
-        self.num_pad = Popup(title='', content=pad, size_hint=(0.8,0.5), 
+            pad.add_widget(Button(text=str(digit), size_hint=(0.29, 0.25),
+                                  on_press=self.add_digit))
+            if digit % 3 == 0:
+                pad.add_widget(Button(text=next(texts), size_hint=(0.1, 0.25),
+                                      on_press=self.plus_minus))
+        pad.add_widget(Button(text='BS', size_hint=(0.29, 0.25),
+                              on_press=self.back_space))
+        pad.add_widget(Button(text='0', size_hint=(0.29, 0.25),
+                              on_press=self.add_digit))
+        pad.add_widget(Button(text='ENT', size_hint=(0.39, 0.25),
+                              on_press=self.enter_val))
+        self.num_pad = Popup(title='', content=pad, size_hint=(0.8, 0.5),
                              pos_hint={'x':0.1, 'y':0})
-        self.text=''
+        self.text = ''
         self.background_color = (0.4, 0.2, 1.0, 0.5)
         self.bind(on_release=self.open_pad)
         self.to_add = 0
         self.sign = 1
     def add_digit(self, btn):
+        '''fired when 0-9 is pressed'''
         if self.num_pad.title == ' ':
             self.num_pad.title = btn.text
         else:
-            self.num_pad.title += btn.text      
+            self.num_pad.title += btn.text
     def back_space(self, btn):
+        '''fired when BS is pressed'''
         if self.num_pad.title != ' ':
             if self.num_pad.title[:-1]:
                 self.num_pad.title = self.num_pad.title[:-1]
             else:
-                self.num_pad.title = ' '       
+                self.num_pad.title = ' '
     def open_pad(self, btn):
+        '''no new info'''
         self.to_add = 0
         self.sign = 1
         self.num_pad.open(self)
-        self.num_pad.title=' '
+        self.num_pad.title = ' '
         self.num_pad.title_size = self.num_pad.height/8
     def plus_minus(self, btn):
+        '''uses self.to_add and self.sign to do plus, minus, equals.  on equals,
+        makes title to self.to_add and resets'''
         if self.num_pad.title != ' ':
             self.to_add += int(self.num_pad.title) * self.sign
         if btn.text == '-':
@@ -162,17 +212,21 @@ class NumberInput(Button):
         if btn.text == '=':
             self.num_pad.title = str(self.to_add)
             self.to_add = 0
-            self.sign = 1 
+            self.sign = 1
         else:
             self.num_pad.title = ' '
     def enter_val(self, btn):
+        '''when you press enter, changes the number_val to fire event. so if you
+        close the window without enter, you don't change any values'''
         self.num_pad.dismiss()
         if self.num_pad.title != ' ':
             self.text = self.num_pad.title
+            #so that on_number_val will fire on enter even if number didn't change
+            self.number_val = self.num_pad.title + ' '
             self.number_val = self.num_pad.title
-        
-        
-# kv file line 30
+
+
+# kv file line 23
 class WeightsPopup(Popup):
     '''the popup called when weighting a die'''
     pass
@@ -194,7 +248,7 @@ class PlotObject(Label):
 class ObjectButton(Button):
     '''simply a button with an object attached'''
     obj = ObjectProperty(PlotObject())
-# kv file line 44
+# kv file line 36
 class PlotPopup(Popup):
     '''popup containing the graph'''
     def __init__(self, **kwargs):
@@ -221,8 +275,8 @@ class PlotPopup(Popup):
             new_color = colors[color_count]
             color_count = (color_count + 1) % len(colors)
             plot_obj.color = new_color
-            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts,
-                                                    color=new_color, mode='triangle_fan'))
+            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts, 
+                                                    color=new_color))
             x_mins.append(plot_obj.x_min)
             x_maxs.append(plot_obj.x_max)
             y_maxs.append(plot_obj.y_max)
@@ -241,14 +295,14 @@ class PlotPopup(Popup):
         x_range[0] -= x_range[0] % x_tick_num
         current = self.ids['graph'].font_size
         factor = 1
-        if x_tick_num > 49: 
+        if x_tick_num > 49:
             factor = 0.75
         if x_tick_num > 99:
             factor = 0.66
         if x_tick_num > 499:
             factor = 0.5
 
-        self.ids['graph'].font_size = int(factor * current)    
+        self.ids['graph'].font_size = int(factor * current)
         self.ids['graph'].x_ticks_major = x_tick_num
         self.ids['graph'].y_ticks_major = y_tick_num
         self.ids['graph'].xmin = x_range[0]
@@ -261,7 +315,8 @@ class PlotPopup(Popup):
         for plot_obj in self._plot_list:
 
             btn = ObjectButton(text=plot_obj.text, size_hint=(None, None),
-                               height=80, obj=plot_obj, color=plot_obj.color)
+                               height=80, obj=plot_obj, color=plot_obj.color, 
+                               valign='middle')
             btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
             self.legend.add_widget(btn)
         self.legend.on_select = self.flash_plot
@@ -275,7 +330,26 @@ class PlotPopup(Popup):
         '''on release, resize drop down to fit widest button'''
         widths = [self.ids['legend'].texture_size[0]]
         for btn in self.legend.children[0].children:
-            btn.width = btn.texture_size[0] + 10
+            raw_lines = (btn.texture_size[0] + 10.)/main().width
+            single_line_ht = btn.texture_size[1]
+            lines = int(raw_lines)
+            if lines < raw_lines:
+                lines += 1
+            split_at = len(btn.text)/lines
+            if len(btn.text) % lines:
+                split_at += 1
+            #def make_lines(text, count):
+            new_text_lst = []
+            copy = btn.text
+            while len(copy) > split_at:
+                new_text_lst.append(copy[:split_at])
+                copy = copy[split_at:]
+            new_text_lst.append(copy)
+            btn.text =  '\n'.join(new_text_lst)
+    
+            #btn.text = make_lines(btn.text, split_at)    
+            btn.width = min(btn.texture_size[0] + 10, main().width)
+            btn.height = max(self.ids['legend'].height, single_line_ht * lines)
             widths.append(btn.width)
         self.ids['legend'].width = max(widths)
     def flash_plot(self, obj, second_time=False):
@@ -286,10 +360,9 @@ class PlotPopup(Popup):
                 for index in range(3):
                     temp_color[index] = 1-temp_color[index]
                 temp_color = [1, 1, 1, 1]
-                #plot.color = temp_color
                 self.ids['graph'].remove_plot(plot)
-                self.ids['graph'].add_plot(MeshLinePlot(points=obj.pts,
-                                                        color=temp_color))
+                new_plot = MeshLinePlot(points=obj.pts, color=temp_color)
+                self.ids['graph'].add_plot(new_plot)
         if second_time:
             Clock.schedule_once(lambda dt: self._callback(obj, True), FLASH_DELAY)
         else:
@@ -299,11 +372,13 @@ class PlotPopup(Popup):
         for plot in self.ids['graph'].plots:
             if plot.points == obj.pts:
                 plot.color = obj.color
+                
         if not second_time:
             Clock.schedule_once(lambda dt: self.flash_plot(obj, True), FLASH_DELAY)
 
 
-# kv file line 70
+
+# kv file line 63
 class PlotCheckBox(BoxLayout):
     '''a checkbox with associated label and function to return label if box checked'''
     text = StringProperty('')
@@ -326,7 +401,7 @@ class PlotCheckBox(BoxLayout):
             self.text = line_1 + line_2.replace(split_char, '\n', 1)
 
 
-# kv file line 85
+# kv file line 78
 class PageBox(BoxLayout):
     '''a box that splits a long text into pages. displays labels of requested page.
     default size ratio is TITLE = 0.15, buttons = 0.05, text=0.8.'''
@@ -343,7 +418,7 @@ class PageBox(BoxLayout):
     def set_title(self, title):
         '''title is a string'''
         self.ids['page_box_title'].text = title
-        
+
     def text_check(self, text):
         '''passes text input to show_page'''
         if text:
@@ -385,7 +460,7 @@ class PageBox(BoxLayout):
         self.pages = page_maker(new_text, lines_per_page)
         self.ids['page_total'].text = '/%s' % (len(self.pages))
         self.show_page(self.current_page)
-# kv file line 153
+# kv file line 141
 class AddRmDice(BoxLayout):
     '''a box taht calls add(num, die) and remove(num, die) funtion
     when pressed.
@@ -402,10 +477,13 @@ class AddRmDice(BoxLayout):
     def addrm(self, btn):
         '''what is called by the on_press method for packed buttons'''
         times = btn.number
+        main_obj = main()
         if times < 0:
-            remove(abs(times), self._die)
+            btn.delay(main_obj.request_remove, abs(times), self._die)
+            #remove(abs(times), self._die)
         else:
-            add(times, self._die)
+            btn.delay(main_obj.request_add, times, self._die)
+            #add(times, self._die)
     def assign_buttons(self, label_number, only_add=False, do_flash=True):
         '''assigns buttons to the box.  label_number is an int.  0 displays the
         str(die), otherwise die.multiply_str(number). only_add controls if there
@@ -437,7 +515,7 @@ class AddRmDice(BoxLayout):
             self.add_widget(btn)
 
 #big_boxes
-# kv file line 159
+# kv file line 147
 class ChangeBox(GridLayout):
     '''displays current dice and allows to change. parent app is what's called
     for dice actions and info updates. all calls are
@@ -457,7 +535,7 @@ class ChangeBox(GridLayout):
         self.add_widget(reset)
         if dice_list:
             new_height = min((self.height - reset.height) / len(dice_list),
-                              max_height)
+                             max_height)
         for die, number in dice_list:
             if (die, number) in self.old_dice_list:
                 changed = False
@@ -468,7 +546,7 @@ class ChangeBox(GridLayout):
             self.add_widget(add_rm)
         self.old_dice_list = dice_list
 
-# kv file line 167
+# kv file line 155
 class AddBox(BoxLayout):
     '''box for adding new dice.  parent app is what's called for dice actions and
     info updates. all calls are self.parent_app.request_something(*args).'''
@@ -490,7 +568,9 @@ class AddBox(BoxLayout):
             btn = SizeButton(die_size=number)
             btn.bind(on_press=self.assign_size_btn)
             self.ids['presets'].add_widget(btn)
+        #self.ids['make_weights'].bind(on_press=lambda btn: delay_function(self.add_weights))
     def update(self):
+        '''called by main app at dice change'''
         self.ids['current'].text = (main().request_info('table_str').
                                     replace('\n', ' \\ '))
     def assign_size_btn(self, btn):
@@ -542,40 +622,55 @@ class AddBox(BoxLayout):
             cols = ((self.die_size+2)//10 +1)
             add_drag = True
             drag_it = Label(text='DRAG\n====>', bold=True)
-        
+
         sz_hint = (1.0/cols, 0.1)
-        self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width) , 
+        
+        self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width),
                                   height=self.height)
         contents = self.popup.ids['contents']
-        
+
         height = int(self.height* 0.9)
         contents.size = (cols*col_width*0.9, height)
+        #cell_sz = (col_width*0.9 - 11, height/10. -11)
+        #contents.spacing= 10
         if add_drag:
             drag_it.size_hint = sz_hint
-            contents.add_widget(drag_it)            
-            contents.add_widget(Button(on_press=self.record_weights, 
-                                       text= 'record\nweights', size_hint=sz_hint))
+            #drag_it.size_hint = (None, None)
+            #drag_it.size = cell_sz
+            contents.add_widget(drag_it)
+            contents.add_widget(Button(on_press=self.record_weights,
+                                       text='record\nweights', size_hint=sz_hint))
+            #contents.add_widget(Button(on_press=self.record_weights,
+            #                           text='record\nweights', size_hint=(None, None),size=cell_sz))
         for roll in range(1, self.die_size + 1):
-            slider = HorSlider(size_hint=sz_hint)
-            slider.write_holder(roll)
-            slider.write_label('weight for ' + str(roll))
-            contents.add_widget(slider)
-        contents.add_widget(Button(on_press=self.record_weights, 
-                                   text= 'record\nweights', size_hint=sz_hint))
+            weighter = NumberSelect(0, 10, number_value=1, size_hint=sz_hint, 
+                                    place_hold=roll)
+            #weighter = NumberSelect(0, 10, number_value=1, size=cell_sz, size_hint=(None, None), 
+            #                        place_hold=roll)
+            weighter.title = 'weight for %s' % (roll)
+            contents.add_widget(weighter)
+            #slider = HorSlider(size_hint=sz_hint)
+            #slider.write_holder(roll)
+            #slider.write_label('weight for ' + str(roll))
+            #contents.add_widget(slider)
+        contents.add_widget(Button(on_press=self.record_weights,
+                                   text='record\nweights', size_hint=sz_hint))
 
         self.popup.open()
     def record_weights(self, button):
         '''records the weights from the weight popup'''
         for child in self.popup.ids['contents'].children[:]:
-            if isinstance(child, HorSlider):
-                self.dictionary[child.get_holder()] = int(child.get_value())
+            if isinstance(child, NumberSelect):
+                self.dictionary[child.place_hold] = child.number_value
+            #if isinstance(child, HorSlider):
+            #    self.dictionary[child.get_holder()] = int(child.get_value())
         if sum(self.dictionary.values()) == 0:
             self.dictionary = {}
         self.assign_die()
         self.popup.dismiss()
 
 
-# kv file line 247
+# kv file line 232
 class InfoBox(BoxLayout):
     '''displays basic info about the die. parent app is what's called for dice
     actions and info updates. all calls are
@@ -599,7 +694,7 @@ class InfoBox(BoxLayout):
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
         to_set = main().request_info('weights_info').replace('a roll of', '')
         self.ids['weight_info'].set_text(to_set)
-# kv file line 269
+# kv file line 254
 class GraphBox(BoxLayout):
     '''buttons for making graphs.  parent app is what's called for dice actions
     and info updates. all calls are self.parent_app.request_something(*args).'''
@@ -616,7 +711,7 @@ class GraphBox(BoxLayout):
         new_string = main().request_info('table_str').replace('\n', ' \\ ')
         self.plot_current = PlotObject(text=new_string)
         self.ids['graph_space'].clear_widgets()
-        self.ids['graph_space'].add_widget(Label(text='past graphs', 
+        self.ids['graph_space'].add_widget(Label(text='past graphs',
                                                  size_hint=(1, 0.1)))
         for item in self.plot_history[::-1]:
             check = PlotCheckBox(text=item.text, size_hint=(1, 0.1), active=False)
@@ -658,7 +753,7 @@ class GraphBox(BoxLayout):
                 new_history.append(self.plot_history[index])
         self.plot_history = new_history[:]
         self.update()
-# kv file line 304
+# kv file line 289
 class StatBox(BoxLayout):
     '''box for getting and displaying stats about rolls. parent app is what's
     called for dice actions and info updates. all calls are
@@ -666,7 +761,7 @@ class StatBox(BoxLayout):
     def __init__(self, **kwargs):
         super(StatBox, self).__init__(**kwargs)
         self.text_lines = 1
-        
+
     def update(self):
         '''called when dice list changes.'''
         val_min, val_max = main().request_info('range')
@@ -692,7 +787,7 @@ class StatBox(BoxLayout):
             else:
                 val_new = int(change_str)
             self.ids[box+'_slider'].value = val_new
-            
+
         self.show_stats()
 
     def show_stats(self):
@@ -719,6 +814,7 @@ class AllRollsBox(PageBox):
     def __init__(self, **kwargs):
         super(AllRollsBox, self).__init__(**kwargs)
     def initialize(self):
+        '''called by main app after init'''
         self.set_title('here are all the rolls and their frequency')
         self.ids['page_box_title'].font_size *= 0.75
     def update(self):
@@ -726,7 +822,7 @@ class AllRollsBox(PageBox):
         text = main().request_info('all_rolls')
         self.set_text(text)
 
-# kv file line 390
+# kv file line 363
 class DicePlatform(Carousel):
     '''the main box.  the parent_app.'''
     def __init__(self, **kwargs):
@@ -772,9 +868,11 @@ class DicePlatform(Carousel):
         x_axis = []
         y_axis = []
         factor = li_div(self._table.total_frequency(), 100)
-
-        for value, frequency in self._table.frequency_all():
+        #dic created to add in zero frequency values using get()
+        dic = dict(self._table.frequency_all())
+        for value in range(min(dic.keys()), max(dic.keys())+ 1):
             x_axis.append(value)
+            frequency = dic.get(value, 0)
             y_axis.append(li_div(frequency, factor))
 
         new_object.x_min = min(x_axis)
@@ -809,7 +907,7 @@ class DiceCarouselApp(App):
         current_app = DicePlatform()
 
         return current_app
-    
+
     def on_pause(self):
         return True
     def on_resume(self):
