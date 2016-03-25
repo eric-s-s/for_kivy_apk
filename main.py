@@ -29,51 +29,13 @@ def main():
 
 
 
-#def add(number, die, *args):
-#    '''delay after call because otherwise button press won't be shown before
-#    button gets erased and rewritten'''
-#    Clock.schedule_once(lambda dt: delayed_add(number, die, *args), FLASH_DELAY)
-#def delayed_add(number, die, *args):
-#    '''see add'''
-#    main().request_add(number, die)
-#
-#def remove(number, die, *args):
-#    '''for delay. same as add'''
-#    Clock.schedule_once(lambda dt: delayed_remove(number, die, *args), FLASH_DELAY)
-#def delayed_remove(number, die, *args):
-#    '''see remove'''
-#    main().request_remove(number, die)
-
-
-# kv file line 5
-
-        
-class HorSlider(BoxLayout):
-    '''a slider of set size that displays it's number and stores a holder for
-    future reference (used here to get roll numbers on die weights)'''
-    def __init__(self, **kwargs):
-        super(HorSlider, self).__init__(**kwargs)
-        self.holder = None
-    def write_label(self, text):
-        '''text= str'''
-        self.ids['hor_title'].text = text
-    def write_holder(self, new_val):
-        '''holder = int'''
-        self.holder = new_val
-    def get_holder(self):
-        '''returns int'''
-        out = self.holder
-        return out
-    def get_value(self):
-        '''returns value of slider'''
-        return int(self.ids['hor_slider'].value)
 # kv file line NONE
 class FlashButton(Button):
     '''a button that flashes for FLASH_DELAY time after pressed, so you know you
-    done taht press real clear-like'''
+    done taht press real clear-like. don't forget to assign on_press using
+    self.delay or you won't see the flash.'''
     def __init__(self, **kwargs):
         super(FlashButton, self).__init__(**kwargs)
-        #self.bind(on_press=self.long_press)
     def delay(self, function, *args):
         '''delays a function call so that button has time to flash.  use with
         on_press=self.delay(function, function_args)'''
@@ -109,52 +71,21 @@ class FlashLabel(Button):
         self.background_color = [0, 0, 0, 0]
 # kv file line NONE
 class PlusMinusButton(FlashButton):
-    '''init - numer=int.  self.number is stored and text is +/- the number'''
+    '''init - numer=int.  self.number is stored and text is +/- the number
+    don't forget to assign on_press using self.delay to see the flash.'''
     def __init__(self, number, **kwargs):
         super(PlusMinusButton, self).__init__(**kwargs)
         self.number = number
         self.text = '{:+}'.format(self.number)
-# kv file line 20
+# kv file line 6
 class SizeButton(FlashButton):
-    '''a button for sizing a die.  label is "D(diesize)" defaults to 1'''
+    '''a button for sizing a die.  label is "D(diesize)" defaults to 1.
+    don't forget to assign on_press using self.delay to see the flash.'''
     die_size = NumericProperty(1)
 
+
+
 # kv file line NONE
-class NumberSelect(Button):
-    number_value = NumericProperty(0)
-    place_hold = NumericProperty(0)
-    title = StringProperty('')
-    def __init__(self, start, stop, **kwargs):
-        super(NumberSelect, self).__init__(**kwargs)
-        #pad_contents = StackLayout(orientation='lr-tb', size_hint_y=None, height=self.width)
-        pad_contents = StackLayout(orientation='lr-tb')
-        the_range = range(start, stop+1)
-        y_hint_ = 0.01* int(100 /(1 + len(the_range)//3))
-        for number in the_range:
-            
-            pad_contents.add_widget(Button(text=str(number), 
-                                           size_hint=(0.33, y_hint_), 
-                                           on_press=self.record_number))
-        self.pad = Popup(title='', content=pad_contents, size_hint=(0.8, 0.5),
-                         pos_hint={'x':0.1, 'y':0}, title_align='center')
-         
-        #self.pad = DropDown()
-        #self.pad.add_widget(pad_contents)
-       
-        
-        self.background_color = (0.4, 0.2, 1.0, 0.5)
-        self.bind(on_release=self.pad.open)
-        self.bind(title = self.set_text)
-        self.bind(number_value = self.set_text)
-        self.halign='center'
-    def set_text(self, instance, text):
-        self.text = self.title + '\n%s' % self.number_value
-        self.pad.title = self.title
-    def record_number(self, btn):
-        #self.text = self.text.replace('\n%s' % self.number_value, '\n' + btn.text)
-        self.number_value = int(btn.text)
-        self.pad.dismiss()
-        
 class NumberInput(Button):
     '''a button that opens a number pad for input. fire input events using
     on_number_val'''
@@ -209,6 +140,8 @@ class NumberInput(Button):
             self.to_add += int(self.num_pad.title) * self.sign
         if btn.text == '-':
             self.sign = -1
+        if btn.text == '+':
+            self.sign = 1
         if btn.text == '=':
             self.num_pad.title = str(self.to_add)
             self.to_add = 0
@@ -225,8 +158,55 @@ class NumberInput(Button):
             self.number_val = self.num_pad.title + ' '
             self.number_val = self.num_pad.title
 
+#for weightpopup
+# kv file line NONE
+class NumberSelect(Button):
+    '''a button that pops up number selection based on it's stop/start. the text
+    is a combination of a title and the number selected.  the place_hold is for
+    use with assigning a roll number and being able to retrieve it easily'''
+    number_value = NumericProperty(0)
+    place_hold = NumericProperty(0)
+    title = StringProperty('')
+    def __init__(self, start, stop, **kwargs):
+        super(NumberSelect, self).__init__(**kwargs)
+        self.the_range = range(start, stop+1)
 
-# kv file line 23
+        self.background_color = (0.4, 0.2, 1.0, 0.5)
+        self.bind(on_release=self.open_pad)
+        self.bind(title=self._set_text)
+        self.bind(number_value=self._set_text)
+        self.halign = 'center'
+    def open_pad(self, *args):
+        '''creates a popup pad and opens it'''
+        pad = SelectPad(self, size_hint=(0.8, 0.5), pos_hint={'x':0.1, 'y':0})
+        pad.open()
+
+    def _set_text(self, instance, text):
+        '''the private method that listens for changes in title or chosen number
+        and updates button text'''
+        self.text = self.title + '\n%s' % self.number_value
+
+# kv file line NONE
+class SelectPad(Popup):
+    '''a popup that is called by NumberSelect.  creates a number pad of number
+    choices.'''
+    def __init__(self, parent_btn, **kwargs):
+        super(SelectPad, self).__init__(**kwargs)
+        self.parent_btn = parent_btn
+
+        self.content = StackLayout(orientation='lr-tb', size_hint=(1, 1))
+        y_hint_ = 0.01* int(100 /(1 + len(self.parent_btn.the_range)//3))
+        for number in self.parent_btn.the_range:
+            self.content.add_widget(Button(text=str(number),
+                                           size_hint=(0.33, y_hint_),
+                                           on_press=self.record_number))
+        self.title = self.parent_btn.title
+        self.title_align = 'center'
+    def record_number(self, btn):
+        '''assigns button's number to parent'''
+        self.parent_btn.number_value = int(btn.text)
+        self.dismiss()
+# kv file line 9
 class WeightsPopup(Popup):
     '''the popup called when weighting a die'''
     pass
@@ -248,7 +228,7 @@ class PlotObject(Label):
 class ObjectButton(Button):
     '''simply a button with an object attached'''
     obj = ObjectProperty(PlotObject())
-# kv file line 36
+# kv file line 22
 class PlotPopup(Popup):
     '''popup containing the graph'''
     def __init__(self, **kwargs):
@@ -275,7 +255,7 @@ class PlotPopup(Popup):
             new_color = colors[color_count]
             color_count = (color_count + 1) % len(colors)
             plot_obj.color = new_color
-            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts, 
+            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts,
                                                     color=new_color))
             x_mins.append(plot_obj.x_min)
             x_maxs.append(plot_obj.x_max)
@@ -315,7 +295,7 @@ class PlotPopup(Popup):
         for plot_obj in self._plot_list:
 
             btn = ObjectButton(text=plot_obj.text, size_hint=(None, None),
-                               height=80, obj=plot_obj, color=plot_obj.color, 
+                               height=80, obj=plot_obj, color=plot_obj.color,
                                valign='middle')
             btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
             self.legend.add_widget(btn)
@@ -338,16 +318,15 @@ class PlotPopup(Popup):
             split_at = len(btn.text)/lines
             if len(btn.text) % lines:
                 split_at += 1
-            #def make_lines(text, count):
+            #make long btn.text multiline
             new_text_lst = []
             copy = btn.text
             while len(copy) > split_at:
                 new_text_lst.append(copy[:split_at])
                 copy = copy[split_at:]
             new_text_lst.append(copy)
-            btn.text =  '\n'.join(new_text_lst)
-    
-            #btn.text = make_lines(btn.text, split_at)    
+            btn.text = '\n'.join(new_text_lst)
+
             btn.width = min(btn.texture_size[0] + 10, main().width)
             btn.height = max(self.ids['legend'].height, single_line_ht * lines)
             widths.append(btn.width)
@@ -372,13 +351,11 @@ class PlotPopup(Popup):
         for plot in self.ids['graph'].plots:
             if plot.points == obj.pts:
                 plot.color = obj.color
-                
+
         if not second_time:
             Clock.schedule_once(lambda dt: self.flash_plot(obj, True), FLASH_DELAY)
 
-
-
-# kv file line 63
+# kv file line 51
 class PlotCheckBox(BoxLayout):
     '''a checkbox with associated label and function to return label if box checked'''
     text = StringProperty('')
@@ -392,7 +369,7 @@ class PlotCheckBox(BoxLayout):
         '''a helper function to bind checkbox active to main active'''
         self.active = self.ids['check_box'].active
     def two_line_text(self, split_char):
-        '''makes a new two-line display label while presering original in
+        '''makes a new two-line display label while preserving original in
         self.identity'''
         if self.ids['scroller'].width < len(self.text)*self.ids['label'].font_size/4:
             self.identity = self.text
@@ -401,7 +378,7 @@ class PlotCheckBox(BoxLayout):
             self.text = line_1 + line_2.replace(split_char, '\n', 1)
 
 
-# kv file line 78
+# kv file line 68
 class PageBox(BoxLayout):
     '''a box that splits a long text into pages. displays labels of requested page.
     default size ratio is TITLE = 0.15, buttons = 0.05, text=0.8.'''
@@ -460,12 +437,11 @@ class PageBox(BoxLayout):
         self.pages = page_maker(new_text, lines_per_page)
         self.ids['page_total'].text = '/%s' % (len(self.pages))
         self.show_page(self.current_page)
-# kv file line 141
+# kv file line 131
 class AddRmDice(BoxLayout):
     '''a box taht calls add(num, die) and remove(num, die) funtion
     when pressed.
     '''
-
     def __init__(self, die, **kwargs):
         super(AddRmDice, self).__init__(**kwargs)
         self._die = die
@@ -475,15 +451,14 @@ class AddRmDice(BoxLayout):
         '''can re-assign number and die after creation.'''
         self._die = die
     def addrm(self, btn):
-        '''what is called by the on_press method for packed buttons'''
+        '''what is called by the on_press method for packed buttons. the buttons
+        are FlashButtons, so they must call btn.delay()'''
         times = btn.number
         main_obj = main()
         if times < 0:
             btn.delay(main_obj.request_remove, abs(times), self._die)
-            #remove(abs(times), self._die)
         else:
             btn.delay(main_obj.request_add, times, self._die)
-            #add(times, self._die)
     def assign_buttons(self, label_number, only_add=False, do_flash=True):
         '''assigns buttons to the box.  label_number is an int.  0 displays the
         str(die), otherwise die.multiply_str(number). only_add controls if there
@@ -515,7 +490,7 @@ class AddRmDice(BoxLayout):
             self.add_widget(btn)
 
 #big_boxes
-# kv file line 147
+# kv file line 137
 class ChangeBox(GridLayout):
     '''displays current dice and allows to change. parent app is what's called
     for dice actions and info updates. all calls are
@@ -526,7 +501,6 @@ class ChangeBox(GridLayout):
         self.old_dice_list = []
     def update(self):
         '''updates the current dice after add, rm or clear'''
-#        self.height = main().current_tab.content.height
         dice_list = main().request_info('dice_list')
         self.clear_widgets()
         max_height = self.height/10
@@ -546,7 +520,7 @@ class ChangeBox(GridLayout):
             self.add_widget(add_rm)
         self.old_dice_list = dice_list
 
-# kv file line 155
+# kv file line 145
 class AddBox(BoxLayout):
     '''box for adding new dice.  parent app is what's called for dice actions and
     info updates. all calls are self.parent_app.request_something(*args).'''
@@ -560,15 +534,11 @@ class AddBox(BoxLayout):
         self.add_it.assign_buttons(0, only_add=True, do_flash=True)
     def initialize(self):
         '''how the box is packed'''
-        #self.ids['custom_input'].num_pad.bind(
-        #    on_dismiss=lambda btn: self.assign_size_text()
-        #    )
         self.ids['add_it'].add_widget(self.add_it)
         for number in [2, 4, 6, 8, 10, 12, 20, 100]:
             btn = SizeButton(die_size=number)
             btn.bind(on_press=self.assign_size_btn)
             self.ids['presets'].add_widget(btn)
-        #self.ids['make_weights'].bind(on_press=lambda btn: delay_function(self.add_weights))
     def update(self):
         '''called by main app at dice change'''
         self.ids['current'].text = (main().request_info('table_str').
@@ -615,62 +585,45 @@ class AddBox(BoxLayout):
         '''opens the weightpopup and sizes accordingly'''
         cols_within_frame = 3
         col_width = int(self.width / cols_within_frame)
-        #height = 620
         add_drag = False
         cols = ((self.die_size)//10 +1)
         if cols > cols_within_frame:
             cols = ((self.die_size+2)//10 +1)
             add_drag = True
             drag_it = Label(text='DRAG\n====>', bold=True)
-
         sz_hint = (1.0/cols, 0.1)
-        
+
         self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width),
                                   height=self.height)
         contents = self.popup.ids['contents']
-
         height = int(self.height* 0.9)
         contents.size = (cols*col_width*0.9, height)
-        #cell_sz = (col_width*0.9 - 11, height/10. -11)
-        #contents.spacing= 10
         if add_drag:
             drag_it.size_hint = sz_hint
-            #drag_it.size_hint = (None, None)
-            #drag_it.size = cell_sz
             contents.add_widget(drag_it)
             contents.add_widget(Button(on_press=self.record_weights,
                                        text='record\nweights', size_hint=sz_hint))
-            #contents.add_widget(Button(on_press=self.record_weights,
-            #                           text='record\nweights', size_hint=(None, None),size=cell_sz))
         for roll in range(1, self.die_size + 1):
-            weighter = NumberSelect(0, 10, number_value=1, size_hint=sz_hint, 
+            weighter = NumberSelect(0, 10, number_value=1, size_hint=sz_hint,
                                     place_hold=roll)
-            #weighter = NumberSelect(0, 10, number_value=1, size=cell_sz, size_hint=(None, None), 
-            #                        place_hold=roll)
+
             weighter.title = 'weight for %s' % (roll)
             contents.add_widget(weighter)
-            #slider = HorSlider(size_hint=sz_hint)
-            #slider.write_holder(roll)
-            #slider.write_label('weight for ' + str(roll))
-            #contents.add_widget(slider)
         contents.add_widget(Button(on_press=self.record_weights,
                                    text='record\nweights', size_hint=sz_hint))
-
         self.popup.open()
     def record_weights(self, button):
         '''records the weights from the weight popup'''
         for child in self.popup.ids['contents'].children[:]:
             if isinstance(child, NumberSelect):
                 self.dictionary[child.place_hold] = child.number_value
-            #if isinstance(child, HorSlider):
-            #    self.dictionary[child.get_holder()] = int(child.get_value())
         if sum(self.dictionary.values()) == 0:
             self.dictionary = {}
         self.assign_die()
         self.popup.dismiss()
 
 
-# kv file line 232
+# kv file line 222
 class InfoBox(BoxLayout):
     '''displays basic info about the die. parent app is what's called for dice
     actions and info updates. all calls are
@@ -689,12 +642,10 @@ class InfoBox(BoxLayout):
         stat_text = ('the range of numbers is %s-%s\nthe mean is %s\nthe stddev is %s'
                      % (values_min, values_max, round(mean, 4), stddev))
         self.ids['stat_str'].text = stat_text
-#        self.ids['weight_info'].height = (self.ids['weight_info'].size_hint[1] *
-#                                          main().current_tab.content.height)
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
         to_set = main().request_info('weights_info').replace('a roll of', '')
         self.ids['weight_info'].set_text(to_set)
-# kv file line 254
+# kv file line 244
 class GraphBox(BoxLayout):
     '''buttons for making graphs.  parent app is what's called for dice actions
     and info updates. all calls are self.parent_app.request_something(*args).'''
@@ -753,7 +704,7 @@ class GraphBox(BoxLayout):
                 new_history.append(self.plot_history[index])
         self.plot_history = new_history[:]
         self.update()
-# kv file line 289
+# kv file line 279
 class StatBox(BoxLayout):
     '''box for getting and displaying stats about rolls. parent app is what's
     called for dice actions and info updates. all calls are
@@ -822,7 +773,7 @@ class AllRollsBox(PageBox):
         text = main().request_info('all_rolls')
         self.set_text(text)
 
-# kv file line 363
+# kv file line 353
 class DicePlatform(Carousel):
     '''the main box.  the parent_app.'''
     def __init__(self, **kwargs):

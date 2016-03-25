@@ -2,21 +2,7 @@
 
 
 #tools
-<HorSlider>:
-    BoxLayout:
-        padding_vertical: [5, 5]
-        orientation:'vertical'
-        Label:
-            id:hor_title
-        Slider:
-            id:hor_slider
-            orientation:'horizontal'
-            min:0
-            max:10
-            value:1
-            step:1
-        Label:
-            text: str(int(hor_slider.value))
+
 <SizeButton>:
     text:'D' + str(self.die_size)
 
@@ -35,8 +21,7 @@
 
 <PlotPopup>:
     title: 'click the legend button for legend.  click on a label to highlight that plot.'
-    FloatLayout:    
-        
+    FloatLayout:
         ScatterLayout:
             id: graph_container
             auto_bring_to_front: False
@@ -71,6 +56,8 @@
         active: root.active
     ScrollView:
         id:scroller
+        scroll_timeout: 550
+        bar_inactive_color: [0.7, 0.7, 0.7, 0.9]
         size_hint: 0.9, 1
         Label:
             id:label
