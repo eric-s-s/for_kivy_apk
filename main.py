@@ -36,16 +36,17 @@ class FlashButton(Button):
     self.delay or you won't see the flash.'''
     def __init__(self, **kwargs):
         super(FlashButton, self).__init__(**kwargs)
-    def delay(self, function, *args):
+    @staticmethod
+    def delay(function, *args):
         '''delays a function call so that button has time to flash.  use with
         on_press=self.delay(function, function_args)'''
-        Clock.schedule_once(lambda dt: function(*args), FLASH_DELAY)
+        Clock.schedule_once(lambda delta_time: function(*args), FLASH_DELAY)
     def on_press(self, *args):
         '''sets background to flash on press'''
         self.color = [1, 0, 0, 1]
         self.background_color = [0.2, 0.2, 1, 1]
         Clock.schedule_once(self.callback, FLASH_DELAY)
-    def callback(self, dt):
+    def callback(self, delta_time):
         '''sets background to normal'''
         self.color = [1, 1, 1, 1]
         self.background_color = [1, 1, 1, 1]
@@ -65,7 +66,7 @@ class FlashLabel(Button):
             self.color = [1, 0, 0, 1]
             self.background_color = [0.2, 0.2, 1, 0.2]
             Clock.schedule_once(self.callback, FLASH_DELAY)
-    def callback(self, dt):
+    def callback(self, delta_time):
         '''reset background and color after delay'''
         self.color = [1, 1, 1, 1]
         self.background_color = [0, 0, 0, 0]
@@ -82,8 +83,6 @@ class SizeButton(FlashButton):
     '''a button for sizing a die.  label is "D(diesize)" defaults to 1.
     don't forget to assign on_press using self.delay to see the flash.'''
     die_size = NumericProperty(1)
-
-
 
 # kv file line NONE
 class NumberInput(Button):
@@ -109,7 +108,7 @@ class NumberInput(Button):
         self.num_pad = Popup(title='', content=pad, size_hint=(0.8, 0.5),
                              pos_hint={'x':0.1, 'y':0})
         self.text = ''
-        self.background_color = (0.4, 0.2, 1.0, 0.5)
+        self.background_color = (0.4, 0.2, 1.0, 0.8)
         self.bind(on_release=self.open_pad)
         self.to_add = 0
         self.sign = 1
@@ -171,7 +170,7 @@ class NumberSelect(Button):
         super(NumberSelect, self).__init__(**kwargs)
         self.the_range = range(start, stop+1)
 
-        self.background_color = (0.4, 0.2, 1.0, 0.5)
+        self.background_color = (0.6, 0.4, 1.0, 1.0)
         self.bind(on_release=self.open_pad)
         self.bind(title=self._set_text)
         self.bind(number_value=self._set_text)
@@ -209,7 +208,56 @@ class SelectPad(Popup):
 # kv file line 9
 class WeightsPopup(Popup):
     '''the popup called when weighting a die'''
-    pass
+    def __init__(self, parent_obj, **kwargs):
+        super(WeightsPopup, self).__init__(**kwargs)
+        self.parent_obj = parent_obj
+        self.pack()
+    def pack(self):
+        '''sizes popup appropiately and packs with right number of weights'''
+        spacing = 10.
+        cols_within_frame = 3
+        die_size = self.parent_obj.die_size
+        col_width = int(self.parent_obj.width / cols_within_frame)
+        add_drag = False
+        cols = ((die_size)//10 +1)
+        if cols > cols_within_frame:
+            cols = ((die_size+2)//10 +1)
+            add_drag = True
+            drag_it = Label(text='DRAG\n====>', bold=True)
+        height = int(self.parent_obj.height* 0.9)
+        sz_hint = ((col_width - spacing)/(cols*col_width), 0.1 * (height-spacing)/height)
+
+        self.size = (min(1.1 * cols*col_width, self.parent_obj.width),
+                     self.parent_obj.height)
+        contents = self.ids['contents']
+        contents.clear_widgets()
+        contents.size = (cols*col_width*0.88, height)
+        contents.spacing = spacing
+        if add_drag:
+            drag_it.size_hint = sz_hint
+            contents.add_widget(drag_it)
+            contents.add_widget(Button(on_press=self.record_weights,
+                                       text='record\nweights', size_hint=sz_hint))
+
+        for roll in range(1, die_size + 1):
+            weighter = NumberSelect(0, 10, number_value=1, size_hint=sz_hint,
+                                    place_hold=roll)
+            weighter.title = 'weight for %s' % (roll)
+            contents.add_widget(weighter)
+        contents.add_widget(Button(on_press=self.record_weights,
+                                   text='record\nweights', size_hint=sz_hint))
+
+    def record_weights(self, button):
+        '''records the weights from the weight popup'''
+        new_weights = {}
+        for child in self.ids['contents'].children[:]:
+            if isinstance(child, NumberSelect):
+                new_weights[child.place_hold] = child.number_value
+        if sum(new_weights.values()) == 0:
+            new_weights = {}
+        self.parent_obj.dictionary = dict(new_weights.items())
+        self.parent_obj.assign_die()
+        self.dismiss()
 
 # kv file line NONE
 class PlotObject(Label):
@@ -242,27 +290,29 @@ class PlotPopup(Popup):
         self.make_legend()
     def make_graph(self):
         '''makes a graph and plots'''
-        colors = [[0.2, 1.0, 0, 1], [0.8, 1.0, 0.1, 1],
-                  [1, 0.4, 0.2, 1], [1, 0.8, 0, 1], [0.6, 0, 0.8, 1],
-                  [1, 0, 0.2, 1], [0, 0.2, 1, 1]]
-        color_count = 0
-        x_mins = []
-        x_maxs = []
-        y_maxs = []
+        colors = itertools_cycle([
+            [0.2, 1.0, 0, 1], [1, 0, 0.2, 1], [0.8, 1.0, 0.1, 1],
+            [0.6, 0, 0.8, 1], [1, 0.4, 0.2, 1], [1, 0.8, 0, 1],
+            [0, 0.2, 1, 1]
+            ])
+        x_range = []
+        y_range = []
         y_ticks = [0.05, 0.1, 0.2, 0.5, 1, 5, 10]
-        x_ticks = [1, 2, 5, 10, 20, 50, 100, 300, 500, 1000, 2000, 5000]
+        x_ticks = [1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500, 1000, 2000, 5000]
         for plot_obj in self._plot_list:
-            new_color = colors[color_count]
-            color_count = (color_count + 1) % len(colors)
-            plot_obj.color = new_color
+            plot_obj.color = next(colors)
             self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts,
-                                                    color=new_color))
-            x_mins.append(plot_obj.x_min)
-            x_maxs.append(plot_obj.x_max)
-            y_maxs.append(plot_obj.y_max)
-        x_range = [min(x_mins), max(x_maxs)]
-        y_range = [0, max(y_maxs)]
-        x_tick_num = (x_range[1]-x_range[0])/12.
+                                                    color=plot_obj.color))
+            if x_range:
+                x_range[0] = min(x_range[0], plot_obj.x_min)
+                x_range[1] = max(x_range[1], plot_obj.x_max)
+            else:
+                x_range = [plot_obj.x_min, plot_obj.x_max]
+            if y_range:
+                y_range[1] = max(y_range[1], plot_obj.y_max)
+            else:
+                y_range = [0, plot_obj.y_max]
+        x_tick_num = (x_range[1]-x_range[0])/9.
         for tick in x_ticks:
             if x_tick_num < tick:
                 x_tick_num = tick
@@ -529,7 +579,6 @@ class AddBox(BoxLayout):
         self.mod = 0
         self.dictionary = {}
         self.die_size = 6
-
         self.add_it = AddRmDice(ds.Die(6), size_hint=(1, 1))
         self.add_it.assign_buttons(0, only_add=True, do_flash=True)
     def initialize(self):
@@ -583,44 +632,9 @@ class AddBox(BoxLayout):
         self.add_it.assign_buttons(0, only_add=True, do_flash=True)
     def add_weights(self):
         '''opens the weightpopup and sizes accordingly'''
-        cols_within_frame = 3
-        col_width = int(self.width / cols_within_frame)
-        add_drag = False
-        cols = ((self.die_size)//10 +1)
-        if cols > cols_within_frame:
-            cols = ((self.die_size+2)//10 +1)
-            add_drag = True
-            drag_it = Label(text='DRAG\n====>', bold=True)
-        sz_hint = (1.0/cols, 0.1)
+        popup = WeightsPopup(self)
+        popup.open()
 
-        self.popup = WeightsPopup(width=min(1.1 * cols*col_width, self.width),
-                                  height=self.height)
-        contents = self.popup.ids['contents']
-        height = int(self.height* 0.9)
-        contents.size = (cols*col_width*0.9, height)
-        if add_drag:
-            drag_it.size_hint = sz_hint
-            contents.add_widget(drag_it)
-            contents.add_widget(Button(on_press=self.record_weights,
-                                       text='record\nweights', size_hint=sz_hint))
-        for roll in range(1, self.die_size + 1):
-            weighter = NumberSelect(0, 10, number_value=1, size_hint=sz_hint,
-                                    place_hold=roll)
-
-            weighter.title = 'weight for %s' % (roll)
-            contents.add_widget(weighter)
-        contents.add_widget(Button(on_press=self.record_weights,
-                                   text='record\nweights', size_hint=sz_hint))
-        self.popup.open()
-    def record_weights(self, button):
-        '''records the weights from the weight popup'''
-        for child in self.popup.ids['contents'].children[:]:
-            if isinstance(child, NumberSelect):
-                self.dictionary[child.place_hold] = child.number_value
-        if sum(self.dictionary.values()) == 0:
-            self.dictionary = {}
-        self.assign_die()
-        self.popup.dismiss()
 
 
 # kv file line 222
@@ -644,6 +658,8 @@ class InfoBox(BoxLayout):
         self.ids['stat_str'].text = stat_text
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
         to_set = main().request_info('weights_info').replace('a roll of', '')
+        to_set = to_set.replace(' a ', ' ')
+        to_set = to_set.replace(' of ', ': ')
         self.ids['weight_info'].set_text(to_set)
 # kv file line 244
 class GraphBox(BoxLayout):
@@ -781,7 +797,6 @@ class DicePlatform(Carousel):
         self._table = ds.DiceTable()
         self.direction = 'right'
         self.loop = 'true'
-        #self.scroll_timeout = 120
         self.initializer()
     def initializer(self):
         '''initializes various values that couldn't be written before both .py
@@ -865,6 +880,6 @@ class DiceCarouselApp(App):
         pass
 
 if __name__ == '__main__':
-    to_run = DiceCarouselApp()
-    to_run.run()
+    RUNNING_APP = DiceCarouselApp()
+    RUNNING_APP.run()
 
