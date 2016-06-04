@@ -12,7 +12,7 @@ from kivy.properties import (NumericProperty, ListProperty, StringProperty,
                              BooleanProperty, ObjectProperty)
 from kivy.clock import Clock
 from kivy.uix.carousel import Carousel
-
+from kivy.graphics.vertex_instructions import Line
 import dicestats as ds
 import tableinfo as ti
 from longintmath import long_int_div as li_div
@@ -263,13 +263,15 @@ class WeightsPopup(Popup):
 class PlotObject(Label):
     '''a label taht contains all the needed info for kivy.garden.graph'''
     pts = ListProperty([(0, 1)])
+    orig = ListProperty([(0,1)])
+    dice = ListProperty([])
     x_min = NumericProperty(0)
     x_max = NumericProperty(0)
     y_min = NumericProperty(0)
     y_max = NumericProperty(1)
 
     def __eq__(self, other):
-        return self.pts == other.pts
+        return self.pts == other.pts and self.text == other.text
     def __ne__(self, other):
         return not self == other
 # kv file line NONE
@@ -408,24 +410,33 @@ class PlotPopup(Popup):
 # kv file line 51
 class PlotCheckBox(BoxLayout):
     '''a checkbox with associated label and function to return label if box checked'''
+    obj = ObjectProperty(PlotObject())
     text = StringProperty('')
     active = BooleanProperty(False)
-    def __init__(self, **kwargs):
+    def __init__(self, reloader=True, **kwargs):
         super(PlotCheckBox, self).__init__(**kwargs)
         self.ids['check_box'].bind(active=self._change_active)
-        self.identity = self.text
+        self.text = self.obj.text
+        if reloader:
+            self.ids['scroller'].size_hint = (0.8, 1)
+            self.add_widget(Button(text='reload', size_hint=(0.1, 1), 
+                                   on_press=self.reload_obj))
+    def reload_obj(self, btn):
+        main().request_reload(self.obj)
+        
 
     def _change_active(self, checkbox, value):
         '''a helper function to bind checkbox active to main active'''
         self.active = self.ids['check_box'].active
     def two_line_text(self, split_char):
-        '''makes a new two-line display label while preserving original in
-        self.identity'''
+        '''makes a new two-line display label while preserving original in'''
+        self.text = self.obj.text
         if self.ids['scroller'].width < len(self.text)*self.ids['label'].font_size/4:
-            self.identity = self.text
             line_1 = self.text[:len(self.text)/2]
             line_2 = self.text[len(self.text)/2:]
             self.text = line_1 + line_2.replace(split_char, '\n', 1)
+    def request_reload(self):
+        main().request_reload(self.obj)
 
 
 # kv file line 68
@@ -681,27 +692,31 @@ class GraphBox(BoxLayout):
         self.ids['graph_space'].add_widget(Label(text='past graphs',
                                                  size_hint=(1, 0.1)))
         for item in self.plot_history[::-1]:
-            check = PlotCheckBox(text=item.text, size_hint=(1, 0.1), active=False)
-            check.two_line_text('\\')
+            check = PlotCheckBox(obj=item, size_hint=(1, 0.1), active=False)
+            #check.two_line_text('\\')
+            
             self.ids['graph_space'].add_widget(check)
         self.ids['graph_space'].add_widget(Label(text='new table',
                                                  size_hint=(1, 0.1)))
-        check = PlotCheckBox(text=self.plot_current.text, size_hint=(1, 0.1),
-                             active=True)
-        check.two_line_text('\\')
+        check = PlotCheckBox(size_hint=(1, 0.1), active=True, 
+                             obj=self.plot_current, reloader=False)
+        #check.two_line_text('\\')
         self.ids['graph_space'].add_widget(check)
     def graph_it(self):
         '''prepares plot and calls PlotPopup'''
         to_plot = []
-        for index in range(len(self.plot_history)):
-            if self.ids['graph_space'].children[index + 2].active:
-                to_plot.append(self.plot_history[index])
+        for item in self.ids['graph_space'].children[1:]:
+            if isinstance(item, PlotCheckBox):
+                if item.active:
+                    to_plot.append(item.obj)
         if self.ids['graph_space'].children[0].active and self.plot_current.text:
             self.plot_current = main().request_plot_object()
             if self.plot_current not in self.plot_history:
                 self.plot_history.insert(0, self.plot_current)
             if self.plot_current not in to_plot:
                 to_plot.insert(0, self.plot_current)
+                
+                    
 
         self.update()
         if to_plot:
@@ -835,7 +850,17 @@ class DicePlatform(Carousel):
         new_object.y_min = min(y_vals)
         new_object.y_max = max(y_vals)
         new_object.pts = graph_pts
+        new_object.orig = self._table.frequency_all()
+        new_object.dice = self._table.get_list()
         return new_object
+    
+    def request_reload(self, plot_obj):
+        self._table = ds.DiceTable()
+        for die, number in plot_obj.dice:
+            self._table.update_list(number, die)
+        self._table.add(1, plot_obj.orig)
+        self.updater()
+        
     def request_add(self, number, die):
         '''adds dice to table'''
         self._table.add_die(number, die)

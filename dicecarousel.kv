@@ -52,8 +52,17 @@
     orientation: 'horizontal'
     CheckBox:
         id: check_box
-        size_hint: 0.1, 0.5
+        size_hint: 0.1, 1
         active: root.active
+        canvas:
+            Color:
+                rgba: 1, 1, 1, 0.4  
+            Line: 
+                points: self.pos[0] + self.size[0]/4, self.pos[1] +self.size[1]/4, self.pos[0] + 3*self.size[0]/4, self.pos[1] + self.size[1]/4, self.pos[0] + 3*self.size[0]/4, self.pos[1] + 3*self.size[1]/4, self.pos[0] + self.size[0]/4, self.pos[1] + 3*self.size[1]/4, self.pos[0] + self.size[0]/4, self.pos[1] +self.size[1]/4
+                width: 3 
+                joint: 'miter'
+                cap: 'square'               
+                
     ScrollView:
         id:scroller
         scroll_timeout: 550
@@ -64,6 +73,13 @@
             text: root.text
             size_hint: None, 1
             width: self.texture_size[0]
+#    Button:
+#        text: 'reload'
+#        size_hint: 0.1, 1
+#        on_press: root.request_reload()
+
+        
+        
 
 <PageBox>:
     orientation:'vertical'
