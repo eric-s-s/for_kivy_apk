@@ -418,9 +418,12 @@ class PlotCheckBox(BoxLayout):
         self.ids['check_box'].bind(active=self._change_active)
         self.text = self.obj.text
         if reloader:
-            self.ids['scroller'].size_hint = (0.8, 1)
-            self.add_widget(Button(text='reload', size_hint=(0.1, 1), 
-                                   on_press=self.reload_obj))
+            self.ids['scroller'].size_hint = (0.7, 1)
+            btn = Button(text='reload', size_hint=(0.2, 0.6), valign='middle',
+                         halign='center', max_lines=1, 
+                         on_press=self.reload_obj)
+            btn.texture_size=btn.size
+            self.add_widget(btn)
     def reload_obj(self, btn):
         main().request_reload(self.obj)
         
@@ -435,8 +438,6 @@ class PlotCheckBox(BoxLayout):
             line_1 = self.text[:len(self.text)/2]
             line_2 = self.text[len(self.text)/2:]
             self.text = line_1 + line_2.replace(split_char, '\n', 1)
-    def request_reload(self):
-        main().request_reload(self.obj)
 
 
 # kv file line 68
@@ -693,14 +694,14 @@ class GraphBox(BoxLayout):
                                                  size_hint=(1, 0.1)))
         for item in self.plot_history[::-1]:
             check = PlotCheckBox(obj=item, size_hint=(1, 0.1), active=False)
-            #check.two_line_text('\\')
+            check.two_line_text('\\')
             
             self.ids['graph_space'].add_widget(check)
         self.ids['graph_space'].add_widget(Label(text='new table',
                                                  size_hint=(1, 0.1)))
         check = PlotCheckBox(size_hint=(1, 0.1), active=True, 
                              obj=self.plot_current, reloader=False)
-        #check.two_line_text('\\')
+        check.two_line_text('\\')
         self.ids['graph_space'].add_widget(check)
     def graph_it(self):
         '''prepares plot and calls PlotPopup'''
@@ -715,9 +716,6 @@ class GraphBox(BoxLayout):
                 self.plot_history.insert(0, self.plot_current)
             if self.plot_current not in to_plot:
                 to_plot.insert(0, self.plot_current)
-                
-                    
-
         self.update()
         if to_plot:
             plotter = PlotPopup()
