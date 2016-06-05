@@ -21,7 +21,7 @@ from kivy.garden.graph import MeshLinePlot
 
 
 #tools
-FLASH_DELAY = 0.5
+FLASH_DELAY = 0.25
 
 def main():
     '''gets the current diceplatform so all can call it'''
@@ -419,22 +419,21 @@ class PlotCheckBox(BoxLayout):
         self.text = self.obj.text
         if reloader:
             self.ids['scroller'].size_hint = (0.7, 1)
-            btn = Button(text='reload', size_hint=(0.2, 0.6), valign='middle',
-                         halign='center', max_lines=1, 
-                         on_press=self.reload_obj)
+            btn = FlashButton(text='reload', size_hint=(0.2, 0.6), max_lines=1,
+                              valign='middle',halign='center',
+                              on_press=self.reload_obj)
             btn.texture_size=btn.size
             self.add_widget(btn)
     def reload_obj(self, btn):
-        main().request_reload(self.obj)
-        
-
+        btn.delay(main().request_reload, self.obj)
     def _change_active(self, checkbox, value):
         '''a helper function to bind checkbox active to main active'''
         self.active = self.ids['check_box'].active
     def two_line_text(self, split_char):
         '''makes a new two-line display label while preserving original in'''
         self.text = self.obj.text
-        if self.ids['scroller'].width < len(self.text)*self.ids['label'].font_size/4:
+        cut_off = 30
+        if len(self.text) > cut_off:
             line_1 = self.text[:len(self.text)/2]
             line_2 = self.text[len(self.text)/2:]
             self.text = line_1 + line_2.replace(split_char, '\n', 1)
@@ -694,15 +693,17 @@ class GraphBox(BoxLayout):
                                                  size_hint=(1, 0.1)))
         for item in self.plot_history[::-1]:
             check = PlotCheckBox(obj=item, size_hint=(1, 0.1), active=False)
+            self.ids['graph_space'].add_widget(check)
             check.two_line_text('\\')
             
-            self.ids['graph_space'].add_widget(check)
+            
         self.ids['graph_space'].add_widget(Label(text='new table',
                                                  size_hint=(1, 0.1)))
         check = PlotCheckBox(size_hint=(1, 0.1), active=True, 
                              obj=self.plot_current, reloader=False)
-        check.two_line_text('\\')
         self.ids['graph_space'].add_widget(check)
+        check.two_line_text('\\')
+        
     def graph_it(self):
         '''prepares plot and calls PlotPopup'''
         to_plot = []
