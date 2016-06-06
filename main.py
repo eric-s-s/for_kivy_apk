@@ -21,7 +21,7 @@ from kivy.garden.graph import MeshLinePlot
 
 
 #tools
-FLASH_DELAY = 0.25
+
 
 def main():
     '''gets the current diceplatform so all can call it'''
@@ -31,32 +31,34 @@ def main():
 
 # kv file line NONE
 class FlashButton(Button):
-    '''a button that flashes for FLASH_DELAY time after pressed, so you know you
-    done taht press real clear-like. don't forget to assign on_press using
-    self.delay or you won't see the flash.'''
-    def __init__(self, **kwargs):
+    '''a button that flashes for delay_time=0.25 sec after pressed, so you know 
+    you done taht press real clear-like. assign on_press using self.delay OR 
+    make the function it calls use self.delay or you won't see the flash.'''
+    def __init__(self, delay_time=0.25, **kwargs):
         super(FlashButton, self).__init__(**kwargs)
-    @staticmethod
-    def delay(function, *args):
+        self.delay_time = delay_time
+        
+    def delay(self, function, *args):
         '''delays a function call so that button has time to flash.  use with
         on_press=self.delay(function, function_args)'''
-        Clock.schedule_once(lambda delta_time: function(*args), FLASH_DELAY)
+        Clock.schedule_once(lambda delta_time: function(*args), self.delay_time)
     def on_press(self, *args):
         '''sets background to flash on press'''
         self.color = [1, 0, 0, 1]
         self.background_color = [0.2, 0.2, 1, 1]
-        Clock.schedule_once(self.callback, FLASH_DELAY)
+        Clock.schedule_once(self.callback, self.delay_time)
     def callback(self, delta_time):
         '''sets background to normal'''
         self.color = [1, 1, 1, 1]
         self.background_color = [1, 1, 1, 1]
 # kv file line NONE
 class FlashLabel(Button):
-    '''a label that flashes for FLASH_DELAY when text is added by add_text.
-    can be turned off with boolean do_flash'''
-    def __init__(self, **kwargs):
+    '''a label that flashes for delay_time=0.5 sec when text is added by 
+    add_text. can be turned off with boolean do_flash'''
+    def __init__(self, delay_time=0.5, **kwargs):
         super(FlashLabel, self).__init__(**kwargs)
         self.background_normal = ''
+        self.delay_time = delay_time
     def add_text(self, text, do_flash=True):
         '''flahes (or not) when text is changed'''
         self.text = text
@@ -65,7 +67,7 @@ class FlashLabel(Button):
         if do_flash:
             self.color = [1, 0, 0, 1]
             self.background_color = [0.2, 0.2, 1, 0.2]
-            Clock.schedule_once(self.callback, FLASH_DELAY)
+            Clock.schedule_once(self.callback, self.delay_time)
     def callback(self, delta_time):
         '''reset background and color after delay'''
         self.color = [1, 1, 1, 1]
@@ -383,7 +385,7 @@ class PlotPopup(Popup):
             btn.height = max(self.ids['legend'].height, single_line_ht * lines)
             widths.append(btn.width)
         self.ids['legend'].width = max(widths)
-    def flash_plot(self, obj, second_time=False):
+    def flash_plot(self, obj, second_time=False, flash_time=0.5):
         '''on press, highlight selected graph'''
         for plot in self.ids['graph'].plots:
             if plot.points == obj.pts:
@@ -395,17 +397,19 @@ class PlotPopup(Popup):
                 new_plot = MeshLinePlot(points=obj.pts, color=temp_color)
                 self.ids['graph'].add_plot(new_plot)
         if second_time:
-            Clock.schedule_once(lambda dt: self._callback(obj, True), FLASH_DELAY)
+            Clock.schedule_once(lambda dt: self._callback(obj, flash_time, True),
+                                flash_time)
         else:
-            Clock.schedule_once(lambda dt: self._callback(obj), FLASH_DELAY)
-    def _callback(self, obj, second_time=False):
+            Clock.schedule_once(lambda dt: self._callback(obj, flash_time), 
+                                flash_time)
+    def _callback(self, obj, flash_time, second_time=False):
         '''resets graph to original color'''
         for plot in self.ids['graph'].plots:
             if plot.points == obj.pts:
                 plot.color = obj.color
-
         if not second_time:
-            Clock.schedule_once(lambda dt: self.flash_plot(obj, True), FLASH_DELAY)
+            Clock.schedule_once(lambda dt: self.flash_plot(obj, True), 
+                                flash_time)
 
 # kv file line 51
 class PlotCheckBox(BoxLayout):
