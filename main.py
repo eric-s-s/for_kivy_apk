@@ -16,9 +16,9 @@ from kivy.clock import Clock
 from kivy.uix.carousel import Carousel
 import dicestats as ds
 import tableinfo as ti
-
+#from file_handler import read_history, write_history, read_table, write_table
 from kivy.garden.graph import MeshLinePlot
-
+import file_handler as fh
 
 #tools
 
@@ -162,7 +162,8 @@ class NumberInput(Button):
         self.num_pad.dismiss()
         if self.num_pad.title != ' ':
             self.text = self.num_pad.title
-            #so that on_number_val will fire on enter even if number didn't change
+            #so that on_number_val will fire on enter even if number
+            #didn't change
             self.number_val = self.num_pad.title + ' '
             self.number_val = self.num_pad.title
 
@@ -234,7 +235,8 @@ class WeightsPopup(Popup):
             add_drag = True
             drag_it = Label(text='DRAG\n====>', bold=True)
         height = int(self.parent_obj.height* 0.9)
-        sz_hint = ((col_width - spacing)/(cols*col_width), 0.1 * (height-spacing)/height)
+        sz_hint = ((col_width - spacing)/(cols*col_width),
+                   0.1 * (height-spacing)/height)
 
         self.size = (min(1.1 * cols*col_width, self.parent_obj.width),
                      self.parent_obj.height)
@@ -277,15 +279,17 @@ class WeightsPopup(Popup):
         self.dismiss()
 
 # kv file line NONE
-class PlotObject(Label):
-    '''a label taht contains all the needed info for kivy.garden.graph'''
-    pts = ListProperty([(0, 1)])
-    orig = ListProperty([(0, 1)])
-    dice = ListProperty([])
-    x_min = NumericProperty(0)
-    x_max = NumericProperty(0)
-    y_min = NumericProperty(0)
-    y_max = NumericProperty(1)
+class PlotObject(object):
+    '''an obj taht contains all the needed info for kivy.garden.graph'''
+    def __init__(self):
+        self.pts = [(0, 1)]
+        self.orig = [(0, 1)]
+        self.dice = []
+        self.x_min = 0
+        self.x_max = 0
+        self.y_min = 0
+        self.y_max = 1
+        self.text = ''
 
     def __eq__(self, other):
         return self.pts == other.pts and self.text == other.text
@@ -412,8 +416,9 @@ class PlotPopup(Popup):
                 new_plot = MeshLinePlot(points=obj.pts, color=temp_color)
                 self.ids['graph'].add_plot(new_plot)
         if second_time:
-            Clock.schedule_once(lambda dt: self._callback(obj, flash_time, True),
-                                flash_time)
+            Clock.schedule_once(
+                lambda dt: self._callback(obj, flash_time, True),
+                flash_time)
         else:
             Clock.schedule_once(lambda dt: self._callback(obj, flash_time),
                                 flash_time)
@@ -428,7 +433,8 @@ class PlotPopup(Popup):
 
 # kv file line 51
 class PlotCheckBox(BoxLayout):
-    '''a checkbox with associated label and function to return label if box checked'''
+    '''a checkbox with associated label and function to return label if box
+    checked'''
     obj = ObjectProperty(PlotObject())
     text = StringProperty('')
     active = BooleanProperty(False)
@@ -609,6 +615,12 @@ class ChangeBox(GridLayout):
             if isinstance(child, AddRmDice):
                 if child.changed:
                     Clock.schedule_once(child.flash_it, 0.01)
+        if not dice_list:
+            self.clear_widgets()
+            intro_text = ('no dice have been added yet.  '+
+                          'swipe right to start.\n<===== swipe =====>')
+            self.add_widget(Label(text=intro_text, text_size=self.size,
+                                  valign='top', halign='center'))
 
 # kv file line 154
 class AddBox(BoxLayout):
@@ -709,7 +721,7 @@ class GraphBox(BoxLayout):
     def __init__(self, **kwargs):
         super(GraphBox, self).__init__(**kwargs)
         self.plot_history = []
-        self.plot_current = PlotObject(text='')
+        self.plot_current = PlotObject()
     def initialize(self):
         '''called at main app init. workaround for .kv file loading before .py'''
         self.ids['graph_space'].add_widget(PlotCheckBox(size_hint=(1, 0.5)))
@@ -717,7 +729,8 @@ class GraphBox(BoxLayout):
         '''updates the current window to display new graph history and current
         table to graph'''
         new_string = main().request_info('table_str').replace('\n', ' \\ ')
-        self.plot_current = PlotObject(text=new_string)
+        self.plot_current = PlotObject()
+        self.plot_current.text = new_string
         self.ids['graph_space'].clear_widgets()
         self.ids['graph_space'].add_widget(Label(text='past graphs',
                                                  size_hint=(1, 0.1)))
@@ -734,7 +747,6 @@ class GraphBox(BoxLayout):
         self.ids['graph_space'].add_widget(check)
         check.two_line_text('\\')
         Clock.schedule_once(lambda dt: check.ids['label'].flash_it(), 0.01)
-
 
     def graph_it(self):
         '''prepares plot and calls PlotPopup'''
@@ -873,7 +885,8 @@ class DicePlatform(Carousel):
         return ti.stats(self._table, stat_list)
     def request_plot_object(self):
         '''converts the table into a PlotObject'''
-        new_object = PlotObject(text=str(self._table).replace('\n', ' \\ '))
+        new_object = PlotObject()
+        new_object.text = str(self._table).replace('\n', ' \\ ')
         graph_pts = ti.graph_pts(self._table, axes=False)
         y_vals = [pts[1] for pts in graph_pts]
 
@@ -911,16 +924,37 @@ class DicePlatform(Carousel):
         '''reset dice table'''
         self._table = ds.DiceTable()
         self.updater()
+    def load_files(self, table, history):
+        self._table = ds.DiceTable()
+        for die, number in table.get_list():
+            self._table.update_list(number, die)
+        self._table.add(1, table.frequency_all())
 
+        self.ids['graph_box'].plot_history = history[:]
+
+        self.updater()
+        for time in range(1, 10):
+            Clock.schedule_once(lambda dt: self.updater(), time/10.)
+
+
+    def write_files(self):
+        fh.write_history(self.ids['graph_box'].plot_history[:])
+        fh.write_table(self._table)
 # kv file line NONE
 class DiceCarouselApp(App):
     '''the app.  it's the dice platform'''
     def build(self):
         current_app = DicePlatform()
-
         return current_app
 
+    def on_start(self):
+        table = fh.read_table()
+        history = fh.read_history()
+        main().load_files(table, history)
+    def on_stop(self):
+        main().write_files()
     def on_pause(self):
+        main().write_files()
         return True
     def on_resume(self):
         pass
