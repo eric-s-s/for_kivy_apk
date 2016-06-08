@@ -115,9 +115,13 @@ def read_history():
         to_read = open('history.txt', 'r')
         json_string = to_read.read()
         to_read.close()
-        return make_history(json_string)
+        return ('ok', make_history(json_string))
     except IOError:
-        return []
+        write_history([])
+        return ('no file', [])
+    except (TypeError, AttributeError, ValueError):
+        write_history([])
+        return ('corrupted file', [])
     
     
 def write_table(table):

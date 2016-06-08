@@ -756,6 +756,7 @@ class GraphBox(BoxLayout):
                 self.plot_history.insert(0, self.plot_current)
             if self.plot_current not in to_plot:
                 to_plot.insert(0, self.plot_current)
+        self.write_history()
         self.update()
         if to_plot:
             plotter = PlotPopup()
@@ -764,6 +765,7 @@ class GraphBox(BoxLayout):
     def clear_all(self):
         '''clear graph history'''
         self.plot_history = []
+        self.write_history()
         self.update()
     def clear_selected(self):
         '''clear selected checked items from graph history'''
@@ -772,6 +774,14 @@ class GraphBox(BoxLayout):
             if not self.ids['graph_space'].children[index + 2].active:
                 new_history.append(self.plot_history[index])
         self.plot_history = new_history[:]
+        self.write_history()
+        self.update()
+    def write_history(self):
+        fh.write_history(self.plot_history)
+    def read_history(self):
+        msg, self.plot_history = fh.read_history()
+        #print msg
+        #print self.plot_history
         self.update()
     
 # kv file line 288
@@ -922,7 +932,7 @@ class DicePlatform(Carousel):
         self.updater()
     def request_load_file(self, *args):
         table = fh.read_table()
-        history = fh.read_history()
+        msg, history = fh.read_history()
         self._table = ds.DiceTable()
         for die, number in table.get_list():
             self._table.update_list(number, die)
@@ -944,11 +954,12 @@ class DiceCarouselApp(App):
         current_app = DicePlatform()
         return current_app
 
-    
-    def on_stop(self):
-        main().request_save_file()
+    def on_start(self):
+        main().ids['graph_box'].read_history()
+#    def on_stop(self):
+#        main().request_save_file()
     def on_pause(self):
-        main().request_save_file()
+        #main().request_save_file()
         return True
     def on_resume(self):
         pass

@@ -207,7 +207,8 @@ class Testfh(unittest.TestCase):
     def test_read_history_no_file(self):
         os.remove('history.txt')
         history = fh.read_history()
-        self.assertEqual(history, [])
+        self.assertEqual(history, ('no file', []))
+        self.assertEqual(fh.read_history(), ('ok', []))
     def test_read_history_with_file(self):
         table = ds.DiceTable()
         po_list = []
@@ -218,7 +219,35 @@ class Testfh(unittest.TestCase):
         po_list.append(create_plot_object(table))
         fh.write_history(po_list)
 
-        self.assertEqual(po_list, fh.read_history())
+        self.assertEqual(('ok', po_list), fh.read_history())
+    def test_read_history_with_corrupted_file(self):
+        table = ds.DiceTable()
+        po_list = []
+        po_list.append(create_plot_object(table))
+        table.add_die(3, ds.Die(6))
+        po_list.append(create_plot_object(table))
+        table.add_die(2, ds.Die(2))
+        po_list.append(create_plot_object(table))
+        fh.write_history(po_list)
+        with open('history.txt', 'r+') as f:
+            to_write = f.read()[:-1]
+            f.write(to_write)
+        self.assertEqual(('corrupted file', []), fh.read_history())
+        
+        fh.write_history(po_list)
+        with open('history.txt', 'w') as f:
+            f.write('{1:2}')
+        self.assertEqual(('corrupted file', []), fh.read_history())
+        
+        fh.write_history(po_list)
+        with open('history.txt', 'w') as f:
+            f.write('asdf')
+        self.assertEqual(('corrupted file', []), fh.read_history())
+        
+        fh.write_history(po_list)
+        with open('history.txt', 'w') as f:
+            f.write('[[]]')
+        self.assertEqual(('corrupted file', []), fh.read_history())
           
 
         

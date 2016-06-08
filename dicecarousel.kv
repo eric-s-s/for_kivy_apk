@@ -285,7 +285,7 @@
             halign: 'center'
             valign: 'middle'
             on_press: root.clear_selected()
-        Button:
+        FlashButton:
             id: save
             text: 'save to file'
             text_size: self.size
@@ -293,8 +293,8 @@
             size_hint: 0.2, 1
             halign: 'center'
             valign: 'middle'
-            on_press: app.root.request_save_file()
-        Button:
+            on_press: self.delay(app.root.request_save_file)
+        FlashButton:
             id: save
             text: 'load file'
             text_size: self.size
@@ -302,7 +302,7 @@
             size_hint: 0.2, 1
             halign: 'center'
             valign: 'middle'
-            on_press: app.root.request_load_file()         
+            on_press: self.delay(app.root.request_load_file)         
 
 <StatBox>:
     BoxLayout:

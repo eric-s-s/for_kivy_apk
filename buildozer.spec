@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = please work2
+title = please work2_alt
 
 # (str) Package name
-package.name = plswk2
+package.name = plswk2_alt
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test
@@ -25,7 +25,7 @@ source.include_exts = py,png,jpg,kv,atlas
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 1.1.0
+version = 1.1.3
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]
