@@ -4,7 +4,7 @@ import json
 import dicestats as ds
 import tableinfo as ti
 
-from main import PlotObject
+
 
 
 def make_table_json(dtable):
@@ -36,55 +36,50 @@ def parse_dice(dice_lst):
                 out.append((ds.Die(int(numbers)), num))
     return out
 
-def make_table(json_str):
+def make_table_basis(json_str):
     '''takes a json_str of a table and makes a table'''
     dice_dic, tuples = json.loads(json_str)
     dice_list = parse_dice(dice_dic)
-    new = ds.DiceTable()
-    new.add(1, tuples)
-    for die, num in dice_list:
-        new.update_list(num, die)
-    return new
+    return dice_list, tuples
 
 def create_plot_object(table):
     '''converts the table into a PlotObject'''
-    new_object = PlotObject()
-    new_object.text = str(table).replace('\n', ' \\ ')
+    new_object = {}
+    new_object['text'] = str(table).replace('\n', ' \\ ')
     graph_pts = ti.graph_pts(table, axes=False)
     y_vals = [pts[1] for pts in graph_pts]
 
-    new_object.x_min, new_object.x_max = table.values_range()
-    new_object.y_min = min(y_vals)
-    new_object.y_max = max(y_vals)
-    new_object.pts = graph_pts
-    new_object.orig = table.frequency_all()
-    new_object.dice = table.get_list()
+    new_object['x_min'], new_object['x_max'] = table.values_range()
+    new_object['y_min'] = min(y_vals)
+    new_object['y_max'] = max(y_vals)
+    new_object['pts'] = graph_pts
+    new_object['orig'] = table.frequency_all()
+    new_object['dice'] = table.get_list()
     return new_object
 
 def make_plot_obj_dic(plot_obj):
-    '''takes a PlotObject and converts attr to dictionary for json'''
+    '''takes a plot_obj dic and makes a deep-ish copy and preps dicelist
+    for json'''
     out = {}
-    properties = plot_obj.__dict__.keys()
-    for prop in properties:
-        val = getattr(plot_obj, prop)
+    for key, val in plot_obj.items():
         if isinstance(val, list):
-            out[prop] = val[:]
+            out[key] = val[:]
         else:
-            out[prop] = val
+            out[key] = val
     out['dice'] = [(repr(die), num) for die, num in out['dice']]
     return out
 
 def make_plot_obj(plot_obj_dic):
     '''takes a plot_obj_dic (from json.loads) and makes a PlotObject'''
-    new = PlotObject()
+    new = {}
     for attr, val in plot_obj_dic.items():
         if attr == 'dice':
-            new.dice = parse_dice(plot_obj_dic['dice'])
+            new['dice'] = parse_dice(plot_obj_dic['dice'])
         elif attr == 'pts' or attr == 'orig':
             new_val = [(pair[0], pair[1]) for pair in val]
-            setattr(new, attr, new_val)
+            new[attr] = new_val
         else:
-            setattr(new, attr, val)
+            new[attr] = val
     return new
     
 def make_history_json(history):
@@ -105,16 +100,16 @@ def make_history(json_string):
 
 def write_history(history):
     '''takes a history and writes it to history.txt'''
-    with open('history.txt', 'w') as to_write:
-        to_write.write(make_history_json(history))
+    with open('history.txt', 'w') as f:
+        f.write(make_history_json(history))
         
 def read_history():
     '''returns a history from file or an empty list if no history. just in case,
     writes an empty list for if anything got corrupted'''
     try:
-        to_read = open('history.txt', 'r')
-        json_string = to_read.read()
-        to_read.close()
+        f = open('history.txt', 'r')
+        json_string = f.read()
+        f.close()
         return ('ok', make_history(json_string))
     except IOError:
         write_history([])
@@ -126,19 +121,19 @@ def read_history():
     
 def write_table(table):
     '''takes a table and writes to table.txt'''
-    with open('table.txt', 'w') as to_write:
-        to_write.write(make_table_json(table))
+    with open('table.txt', 'w') as f:
+        f.write(make_table_json(table))
         
 def read_table():
     '''returns a table from file or an empty table if no file. just in case,
     writes an empty table if anything got corrupted.'''
     try:
-        to_read = open('table.txt', 'r')
-        json_string = to_read.read()
-        to_read.close()
-        return make_table(json_string)    
+        f = open('table.txt', 'r')
+        json_string = f.read()
+        f.close()
+        return make_table_basis(json_string)    
     except IOError:
-        return ds.DiceTable()
+        return [[], [[0, 1]]]
       
     
         

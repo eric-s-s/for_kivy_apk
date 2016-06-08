@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = please work2_alt
+title = please work2
 
 # (str) Package name
-package.name = plswk2_alt
+package.name = plswk2
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test

@@ -1,4 +1,5 @@
 # pylint: disable=no-member, unused-argument, no-name-in-module
+# pylint: disable=too-many-public-methods, maybe-no-member, super-on-old-class
 '''requires kivy and kivy garden graph'''
 from itertools import cycle as itertools_cycle
 
@@ -16,7 +17,6 @@ from kivy.clock import Clock
 from kivy.uix.carousel import Carousel
 import dicestats as ds
 import tableinfo as ti
-#from file_handler import read_history, write_history, read_table, write_table
 from kivy.garden.graph import MeshLinePlot
 import file_handler as fh
 
@@ -248,7 +248,8 @@ class WeightsPopup(Popup):
             drag_it.size_hint = sz_hint
             contents.add_widget(drag_it)
             contents.add_widget(Button(on_press=self.record_weights,
-                                       text='record\nweights', size_hint=sz_hint))
+                                       text='record\nweights',
+                                       size_hint=sz_hint))
 
         for roll in range(1, die_size + 1):
             weighter = NumberSelect(0, 10, number_value=1, size_hint=sz_hint,
@@ -278,27 +279,11 @@ class WeightsPopup(Popup):
         self.parent_obj.assign_die()
         self.dismiss()
 
-# kv file line NONE
-class PlotObject(object):
-    '''an obj taht contains all the needed info for kivy.garden.graph'''
-    def __init__(self):
-        self.pts = [(0, 1)]
-        self.orig = [(0, 1)]
-        self.dice = []
-        self.x_min = 0
-        self.x_max = 0
-        self.y_min = 0
-        self.y_max = 1
-        self.text = ''
 
-    def __eq__(self, other):
-        return self.pts == other.pts and self.text == other.text
-    def __ne__(self, other):
-        return not self == other
 # kv file line NONE
 class ObjectButton(Button):
     '''simply a button with an object attached'''
-    obj = ObjectProperty(PlotObject())
+    obj = ObjectProperty({})
 # kv file line 22
 class PlotPopup(Popup):
     '''popup containing the graph'''
@@ -321,20 +306,21 @@ class PlotPopup(Popup):
         x_range = []
         y_range = []
         y_ticks = [0.05, 0.1, 0.2, 0.5, 1, 5, 10]
-        x_ticks = [1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500, 1000, 2000, 5000]
+        x_ticks = [1, 2, 5, 10, 20, 30, 50, 100, 200,
+                   300, 500, 1000, 2000, 5000]
         for plot_obj in self._plot_list:
-            plot_obj.color = next(colors)
-            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj.pts,
-                                                    color=plot_obj.color))
+            plot_obj['color'] = next(colors)
+            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj['pts'],
+                                                    color=plot_obj['color']))
             if x_range:
-                x_range[0] = min(x_range[0], plot_obj.x_min)
-                x_range[1] = max(x_range[1], plot_obj.x_max)
+                x_range[0] = min(x_range[0], plot_obj['x_min'])
+                x_range[1] = max(x_range[1], plot_obj['x_max'])
             else:
-                x_range = [plot_obj.x_min, plot_obj.x_max]
+                x_range = [plot_obj['x_min'], plot_obj['x_max']]
             if y_range:
-                y_range[1] = max(y_range[1], plot_obj.y_max)
+                y_range[1] = max(y_range[1], plot_obj['y_max'])
             else:
-                y_range = [0, plot_obj.y_max]
+                y_range = [0, plot_obj['y_max']]
         x_tick_num = (x_range[1]-x_range[0])/9.
         for tick in x_ticks:
             if x_tick_num < tick:
@@ -367,8 +353,8 @@ class PlotPopup(Popup):
         '''created the dropdown menu that's called by 'legend' button'''
         for plot_obj in self._plot_list:
 
-            btn = ObjectButton(text=plot_obj.text, size_hint=(None, None),
-                               height=80, obj=plot_obj, color=plot_obj.color,
+            btn = ObjectButton(text=plot_obj['text'], size_hint=(None, None),
+                               height=80, obj=plot_obj, color=plot_obj['color'],
                                valign='middle')
             btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
             self.legend.add_widget(btn)
@@ -407,13 +393,10 @@ class PlotPopup(Popup):
     def flash_plot(self, obj, second_time=False, flash_time=0.5):
         '''on press, highlight selected graph'''
         for plot in self.ids['graph'].plots:
-            if plot.points == obj.pts:
-                temp_color = plot.color
-                for index in range(3):
-                    temp_color[index] = 1-temp_color[index]
+            if plot.points == obj['pts']:
                 temp_color = [1, 1, 1, 1]
                 self.ids['graph'].remove_plot(plot)
-                new_plot = MeshLinePlot(points=obj.pts, color=temp_color)
+                new_plot = MeshLinePlot(points=obj['pts'], color=temp_color)
                 self.ids['graph'].add_plot(new_plot)
         if second_time:
             Clock.schedule_once(
@@ -425,8 +408,8 @@ class PlotPopup(Popup):
     def _callback(self, obj, flash_time, second_time=False):
         '''resets graph to original color'''
         for plot in self.ids['graph'].plots:
-            if plot.points == obj.pts:
-                plot.color = obj.color
+            if plot.points == obj['pts']:
+                plot.color = obj['color']
         if not second_time:
             Clock.schedule_once(lambda dt: self.flash_plot(obj, True),
                                 flash_time)
@@ -435,13 +418,13 @@ class PlotPopup(Popup):
 class PlotCheckBox(BoxLayout):
     '''a checkbox with associated label and function to return label if box
     checked'''
-    obj = ObjectProperty(PlotObject())
+    obj = ObjectProperty({'text':''})
     text = StringProperty('')
     active = BooleanProperty(False)
     def __init__(self, reloader=True, **kwargs):
         super(PlotCheckBox, self).__init__(**kwargs)
         self.ids['check_box'].bind(active=self._change_active)
-        self.text = self.obj.text
+        self.text = self.obj['text']
         if reloader:
             self.ids['scroller'].size_hint = (0.7, 1)
             btn = FlashButton(text='reload', size_hint=(0.2, 0.6), max_lines=1,
@@ -457,7 +440,7 @@ class PlotCheckBox(BoxLayout):
         self.active = self.ids['check_box'].active
     def two_line_text(self, split_char):
         '''makes a new two-line display label while preserving original in'''
-        self.text = self.obj.text
+        self.text = self.obj['text']
         cut_off = 30
         if len(self.text) > cut_off:
             line_1 = self.text[:len(self.text)/2]
@@ -467,8 +450,8 @@ class PlotCheckBox(BoxLayout):
 
 # kv file line 77
 class PageBox(BoxLayout):
-    '''a box that splits a long text into pages. displays labels of requested page.
-    default size ratio is TITLE = 0.15, buttons = 0.05, text=0.8.'''
+    '''a box that splits a long text into pages. displays labels of requested
+    page. default size ratio is TITLE = 0.15, buttons = 0.05, text=0.8.'''
     def __init__(self, **kwargs):
         super(PageBox, self).__init__(**kwargs)
         self.pages = ['']
@@ -619,8 +602,8 @@ class ChangeBox(GridLayout):
 
 # kv file line 154
 class AddBox(BoxLayout):
-    '''box for adding new dice.  parent app is what's called for dice actions and
-    info updates. all calls are self.parent_app.request_something(*args).'''
+    '''box for adding new dice.  parent app is what's called for dice actions
+    and info updates. all calls are self.parent_app.request_something(*args).'''
     def __init__(self, **kwargs):
         super(AddBox, self).__init__(**kwargs)
         self.mod = 0
@@ -693,16 +676,18 @@ class InfoBox(BoxLayout):
     def __init__(self, **kwargs):
         super(InfoBox, self).__init__(**kwargs)
     def initialize(self):
-        '''called at main app init. workaround for .kv file loading before .py'''
+        '''called at main app init. workaround for kv file loading before py'''
         self.ids['weight_info'].reset_sizes([0.08, 0.1, 0.82])
         self.ids['weight_info'].set_title('full weight info')
     def update(self):
         '''updates all the info in box.'''
-        values_min, values_max = main().request_info('range')
+        vals_min, vals_max = main().request_info('range')
         mean = main().request_info('mean')
         stddev = main().request_info('stddev')
-        stat_text = ('the range of numbers is %s-%s\nthe mean is %s\nthe stddev is %s'
-                     % (values_min, values_max, round(mean, 4), stddev))
+        stat_text = (
+            'the range of numbers is {}-{}\n'.format(vals_min, vals_max) +
+            'the mean is {:.4}\nthe stddev is {}'.format(mean, stddev)
+             )        
         self.ids['stat_str'].text = stat_text
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
         to_set = main().request_info('weights_info').replace('a roll of', '')
@@ -716,7 +701,7 @@ class GraphBox(BoxLayout):
     def __init__(self, **kwargs):
         super(GraphBox, self).__init__(**kwargs)
         self.plot_history = []
-        self.plot_current = PlotObject()
+        self.plot_current = {'text':''}
     def initialize(self):
         '''called at main app init. workaround for .kv file loading before .py'''
         self.ids['graph_space'].add_widget(PlotCheckBox(size_hint=(1, 0.5)))
@@ -724,8 +709,8 @@ class GraphBox(BoxLayout):
         '''updates the current window to display new graph history and current
         table to graph'''
         new_string = main().request_info('table_str').replace('\n', ' \\ ')
-        self.plot_current = PlotObject()
-        self.plot_current.text = new_string
+        self.plot_current = {'text':''}
+        self.plot_current['text'] = new_string
         self.ids['graph_space'].clear_widgets()
         self.ids['graph_space'].add_widget(Label(text='past graphs',
                                                  size_hint=(1, 0.1)))
@@ -750,13 +735,23 @@ class GraphBox(BoxLayout):
             if isinstance(item, PlotCheckBox):
                 if item.active:
                     to_plot.append(item.obj)
-        if self.ids['graph_space'].children[0].active and self.plot_current.text:
-            self.plot_current = main().request_plot_object()
-            if self.plot_current not in self.plot_history:
-                self.plot_history.insert(0, self.plot_current)
-            if self.plot_current not in to_plot:
-                to_plot.insert(0, self.plot_current)
-        self.write_history()
+        
+        if (self.ids['graph_space'].children[0].active and 
+            self.plot_current['text']):
+            orig = main().request_info('tuple_list')
+            text = self.plot_current['text']
+
+            new_plot_obj = {}
+            for plot_obj in self.plot_history:
+                if orig == plot_obj['orig'] and text == plot_obj['text']:
+                    new_plot_obj = plot_obj.copy()
+            
+            if not new_plot_obj:
+                new_plot_obj = main().request_plot_object()
+                self.plot_history.insert(0, new_plot_obj)
+            if new_plot_obj not in to_plot:
+                to_plot.insert(0, new_plot_obj)
+        
         self.update()
         if to_plot:
             plotter = PlotPopup()
@@ -765,7 +760,6 @@ class GraphBox(BoxLayout):
     def clear_all(self):
         '''clear graph history'''
         self.plot_history = []
-        self.write_history()
         self.update()
     def clear_selected(self):
         '''clear selected checked items from graph history'''
@@ -774,14 +768,11 @@ class GraphBox(BoxLayout):
             if not self.ids['graph_space'].children[index + 2].active:
                 new_history.append(self.plot_history[index])
         self.plot_history = new_history[:]
-        self.write_history()
         self.update()
     def write_history(self):
         fh.write_history(self.plot_history)
     def read_history(self):
         msg, self.plot_history = fh.read_history()
-        #print msg
-        #print self.plot_history
         self.update()
     
 # kv file line 288
@@ -883,7 +874,8 @@ class DicePlatform(Carousel):
                     'table_str': [str, (self._table,)],
                     'weights_info': [self._table.weights_info, ()],
                     'dice_list': [self._table.get_list, ()],
-                    'all_rolls': [ti.full_table_string, (self._table,)]}
+                    'all_rolls': [ti.full_table_string, (self._table,)],
+                    'tuple_list': [self._table.frequency_all, ()]}
         command, args = requests[request]
         return command(*args)
     def request_stats(self, stat_list):
@@ -891,25 +883,25 @@ class DicePlatform(Carousel):
         return ti.stats(self._table, stat_list)
     def request_plot_object(self):
         '''converts the table into a PlotObject'''
-        new_object = PlotObject()
-        new_object.text = str(self._table).replace('\n', ' \\ ')
+        new_object = {}
+        new_object['text'] = str(self._table).replace('\n', ' \\ ')
         graph_pts = ti.graph_pts(self._table, axes=False)
         y_vals = [pts[1] for pts in graph_pts]
 
-        new_object.x_min, new_object.x_max = self._table.values_range()
-        new_object.y_min = min(y_vals)
-        new_object.y_max = max(y_vals)
-        new_object.pts = graph_pts
-        new_object.orig = self._table.frequency_all()
-        new_object.dice = self._table.get_list()
+        new_object['x_min'], new_object['x_max'] = self._table.values_range()
+        new_object['y_min'] = min(y_vals)
+        new_object['y_max'] = max(y_vals)
+        new_object['pts'] = graph_pts
+        new_object['orig'] = self._table.frequency_all()
+        new_object['dice'] = self._table.get_list()
         return new_object
 
     def request_reload(self, plot_obj):
         '''loads plot_obj as the main die table'''
         self._table = ds.DiceTable()
-        for die, number in plot_obj.dice:
+        for die, number in plot_obj['dice']:
             self._table.update_list(number, die)
-        self._table.add(1, plot_obj.orig)
+        self._table.add(1, plot_obj['orig'])
         self.updater()
 
     def request_add(self, number, die):
@@ -931,22 +923,20 @@ class DicePlatform(Carousel):
         self._table = ds.DiceTable()
         self.updater()
     def request_load_file(self, *args):
-        table = fh.read_table()
+        '''loads from file'''
+        dice_list, tuples = fh.read_table()
         msg, history = fh.read_history()
         self._table = ds.DiceTable()
-        for die, number in table.get_list():
+        for die, number in dice_list:
             self._table.update_list(number, die)
-        self._table.add(1, table.frequency_all())
-
+        self._table.add(1, tuples)
         self.ids['graph_box'].plot_history = history[:]
-
-        self.updater()
-        
-
-
+        self.updater()    
     def request_save_file(self, *args):
+        '''saves to file'''
         fh.write_history(self.ids['graph_box'].plot_history[:])
         fh.write_table(self._table)
+
 # kv file line NONE
 class DiceCarouselApp(App):
     '''the app.  it's the dice platform'''
@@ -954,8 +944,8 @@ class DiceCarouselApp(App):
         current_app = DicePlatform()
         return current_app
 
-    def on_start(self):
-        main().ids['graph_box'].read_history()
+#    def on_start(self):
+#        main().ids['graph_box'].read_history()
 #    def on_stop(self):
 #        main().request_save_file()
     def on_pause(self):
