@@ -10,7 +10,7 @@ from main import PlotObject
 def make_table_json(dtable):
     '''takes a table and converts it into json str of '[dice_list, freqs]' '''
     d_list = [(repr(die), num) for die, num in dtable.get_list()]
-    return json.dumps([d_list, dtable.frequency_all()])
+    return json.dumps([d_list, dtable.frequency_all()], indent=2)
 def parse_dice(dice_lst):
     '''takes a list of [['die-repr':number], [..]] and makes a dice_list'''
     out = []
@@ -93,7 +93,7 @@ def make_history_json(history):
     new_list = []
     for p_obj in history:
         new_list.append(make_plot_obj_dic(p_obj))
-    return json.dumps(new_list)
+    return json.dumps(new_list, indent=2)
     
 def make_history(json_string):
     '''takes a json string and converts to a list of PlotObjects'''
@@ -118,8 +118,7 @@ def read_history():
         return make_history(json_string)
     except IOError:
         return []
-    finally:
-        write_history([])
+    
     
 def write_table(table):
     '''takes a table and writes to table.txt'''
@@ -136,8 +135,7 @@ def read_table():
         return make_table(json_string)    
     except IOError:
         return ds.DiceTable()
-    finally:
-        write_table(ds.DiceTable())  
+      
     
         
 

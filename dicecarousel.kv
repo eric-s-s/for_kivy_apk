@@ -263,7 +263,7 @@
             text: 'graph it'
             text_size: self.size
             size: self.texture_size
-            size_hint: 0.33, 1
+            size_hint: 0.2, 1
             halign: 'center'
             valign: 'middle'
             on_press: self.delay(root.graph_it)
@@ -272,7 +272,7 @@
             text: 'clear history'
             text_size: self.size
             size: self.texture_size
-            size_hint: 0.33, 1
+            size_hint: 0.2, 1
             halign: 'center'
             valign: 'middle'
             on_press: root.clear_all()
@@ -281,10 +281,29 @@
             text: 'clear selected'
             text_size: self.size
             size: self.texture_size
-            size_hint: 0.33, 1
+            size_hint: 0.2, 1
             halign: 'center'
             valign: 'middle'
             on_press: root.clear_selected()
+        Button:
+            id: save
+            text: 'save to file'
+            text_size: self.size
+            size: self.texture_size
+            size_hint: 0.2, 1
+            halign: 'center'
+            valign: 'middle'
+            on_press: app.root.request_save_file()
+        Button:
+            id: save
+            text: 'load file'
+            text_size: self.size
+            size: self.texture_size
+            size_hint: 0.2, 1
+            halign: 'center'
+            valign: 'middle'
+            on_press: app.root.request_load_file()         
+
 <StatBox>:
     BoxLayout:
         spacing: 10

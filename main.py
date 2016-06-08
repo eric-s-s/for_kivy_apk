@@ -615,12 +615,7 @@ class ChangeBox(GridLayout):
             if isinstance(child, AddRmDice):
                 if child.changed:
                     Clock.schedule_once(child.flash_it, 0.01)
-        if not dice_list:
-            self.clear_widgets()
-            intro_text = ('no dice have been added yet.  '+
-                          'swipe right to start.\n<===== swipe =====>')
-            self.add_widget(Label(text=intro_text, text_size=self.size,
-                                  valign='top', halign='center'))
+        
 
 # kv file line 154
 class AddBox(BoxLayout):
@@ -778,6 +773,7 @@ class GraphBox(BoxLayout):
                 new_history.append(self.plot_history[index])
         self.plot_history = new_history[:]
         self.update()
+    
 # kv file line 288
 class StatBox(BoxLayout):
     '''box for getting and displaying stats about rolls. parent app is what's
@@ -924,7 +920,9 @@ class DicePlatform(Carousel):
         '''reset dice table'''
         self._table = ds.DiceTable()
         self.updater()
-    def load_files(self, table, history):
+    def request_load_file(self, *args):
+        table = fh.read_table()
+        history = fh.read_history()
         self._table = ds.DiceTable()
         for die, number in table.get_list():
             self._table.update_list(number, die)
@@ -933,11 +931,10 @@ class DicePlatform(Carousel):
         self.ids['graph_box'].plot_history = history[:]
 
         self.updater()
-        for time in range(1, 10):
-            Clock.schedule_once(lambda dt: self.updater(), time/10.)
+        
 
 
-    def write_files(self):
+    def request_save_file(self, *args):
         fh.write_history(self.ids['graph_box'].plot_history[:])
         fh.write_table(self._table)
 # kv file line NONE
@@ -947,14 +944,11 @@ class DiceCarouselApp(App):
         current_app = DicePlatform()
         return current_app
 
-    def on_start(self):
-        table = fh.read_table()
-        history = fh.read_history()
-        main().load_files(table, history)
+    
     def on_stop(self):
-        main().write_files()
+        main().request_save_file()
     def on_pause(self):
-        main().write_files()
+        main().request_save_file()
         return True
     def on_resume(self):
         pass
