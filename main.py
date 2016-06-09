@@ -685,8 +685,8 @@ class InfoBox(BoxLayout):
         mean = main().request_info('mean')
         stddev = main().request_info('stddev')
         stat_text = (
-            'the range of numbers is {}-{}\n'.format(vals_min, vals_max) +
-            'the mean is {:.4}\nthe stddev is {}'.format(mean, stddev)
+            'the range of numbers is {:,}-{:,}\n'.format(vals_min, vals_max) +
+            'the mean is {:,}\nthe stddev is {}'.format(round(mean, 4), stddev)
              )        
         self.ids['stat_str'].text = stat_text
         self.ids['dice_table_str'].text = '\n' + main().request_info('table_str')
@@ -774,6 +774,7 @@ class GraphBox(BoxLayout):
     def read_history(self):
         msg, self.plot_history = fh.read_history()
         self.update()
+        return msg
     
 # kv file line 288
 class StatBox(BoxLayout):
@@ -793,14 +794,15 @@ class StatBox(BoxLayout):
         self.ids['start_slider'].max = val_max
         mean = main().request_info('mean')
         stddev = main().request_info('stddev')
-        self.ids['table_info'].text = (('the range of numbers is %s-%s\nthe ' +
-                                        'mean is %s\nthe stddev is %s') %
-                                       (val_min, val_max, round(mean, 4), stddev))
+        self.ids['table_info'].text = (
+            'the range of numbers is {:,}-{:,}\n'.format(val_min, val_max) +
+            'the mean is {:,}\nthe stddev is {}'.format(round(mean, 4), stddev)
+             )
         self.show_stats()
     def assign_text_value(self, box='start'):
         '''called by text_input to assign that value to sliders and show stats'''
         val_min, val_max = main().request_info('range')
-        change_str = self.ids[box + '_slider_text'].text
+        change_str = self.ids[box + '_slider_text'].text.replace(',', '')
         if change_str:
             if int(change_str) < val_min:
                 val_new = val_min
@@ -816,8 +818,8 @@ class StatBox(BoxLayout):
         '''the main function. displays stats of current slider values.'''
         val_1 = int(self.ids['stop_slider'].value)
         val_2 = int(self.ids['start_slider'].value)
-        self.ids['stop_slider_text'].text = str(val_1)
-        self.ids['start_slider_text'].text = str(val_2)
+        self.ids['stop_slider_text'].text = '{:,}'.format(val_1)
+        self.ids['start_slider_text'].text = '{:,}'.format(val_2)
         stat_list = range(min(val_1, val_2), max(val_1, val_2) + 1)
         stat_info = main().request_stats(stat_list)
         stat_text = ('\n    {stat[0]} occurred {stat[1]} times\n'+
@@ -922,20 +924,7 @@ class DicePlatform(Carousel):
         '''reset dice table'''
         self._table = ds.DiceTable()
         self.updater()
-    def request_load_file(self, *args):
-        '''loads from file'''
-        dice_list, tuples = fh.read_table()
-        msg, history = fh.read_history()
-        self._table = ds.DiceTable()
-        for die, number in dice_list:
-            self._table.update_list(number, die)
-        self._table.add(1, tuples)
-        self.ids['graph_box'].plot_history = history[:]
-        self.updater()    
-    def request_save_file(self, *args):
-        '''saves to file'''
-        fh.write_history(self.ids['graph_box'].plot_history[:])
-        fh.write_table(self._table)
+    
 
 # kv file line NONE
 class DiceCarouselApp(App):
@@ -944,12 +933,42 @@ class DiceCarouselApp(App):
         current_app = DicePlatform()
         return current_app
 
-#    def on_start(self):
-#        main().ids['graph_box'].read_history()
-#    def on_stop(self):
-#        main().request_save_file()
+    def on_start(self):
+        text = ('this is a platform for finding the probability of dice ' + 
+                'rolls for any set of dice. For example, the chance of ' +
+                'rolling a 4 with 3 six-sided dice is 3 out of 216.\n\n' +
+
+                'Swipe right ===> to get to the add box.  pick a die size, ' +
+                'and pick a number of dice to add. Add as many kinds of ' +
+                'dice as you want. You can also add a modifier to the die ' +
+                '(for example 3-sided die +4), or you can make the die a ' +
+                'weighted die (a 2-sided die with weights 1:3, 2:8 rolls ' +
+                'a \'one\'  3 times out of every 11 times).\n\n' +
+                
+                'come back to this window to add or subtract ' +
+                'dice already added.\n\n' +
+
+                'The graph area is for getting a graph of the set of dice. ' +
+                'It records every set of dice that have been graphed and ' +
+                'you can reload those dice at any time.\n\n' +
+
+                'The stats area will give you the stats of any set of ' +
+                'rolls you choose. The last window gives you details of ' +
+                'the raw data.') 
+        msg = main().ids['graph_box'].read_history()
+        if msg == 'ok' and main().ids['graph_box'].plot_history:
+            hist_ok = ('IF YOU GO TO THE GRAPH AREA,\n'+
+                       'YOU\'LL FIND YOUR PREVIOUS HISTORY\n\n')
+            text = hist_ok + text
+        if msg == 'corrupted file':
+            hist_gone = ('TRIED TO LOAD HISTORY BUT\nTHE FILE HAD AN ERROR\n'+
+                         'whatcha gonna do about it?  cry?\n\n')
+            text = hist_gone + text
+        main().ids['change_box'].ids['intro'].text = text
+    def on_stop(self):
+        main().ids['graph_box'].write_history()
     def on_pause(self):
-        #main().request_save_file()
+        main().ids['graph_box'].write_history()
         return True
     def on_resume(self):
         pass

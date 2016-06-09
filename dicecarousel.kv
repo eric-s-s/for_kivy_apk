@@ -145,7 +145,8 @@
 #big boxes
 <ChangeBox>:
     Label:
-        text: 'no dice have been added yet.  swipe right to start.\n<===== swipe =====>'
+        id: intro
+        text: ''
         text_size:self.size
         valign: 'top'
         halign: 'center'
@@ -236,6 +237,7 @@
         size_hint: 1, 0.15
         text:'test'
         text_size: self.size
+        halign: 'center'
     ScrollView:
         id:table_str_wrapper
         size_hint: 1, 0.25
@@ -263,7 +265,7 @@
             text: 'graph it'
             text_size: self.size
             size: self.texture_size
-            size_hint: 0.2, 1
+            size_hint: 0.33, 1
             halign: 'center'
             valign: 'middle'
             on_press: self.delay(root.graph_it)
@@ -272,7 +274,7 @@
             text: 'clear history'
             text_size: self.size
             size: self.texture_size
-            size_hint: 0.2, 1
+            size_hint: 0.33, 1
             halign: 'center'
             valign: 'middle'
             on_press: root.clear_all()
@@ -281,28 +283,11 @@
             text: 'clear selected'
             text_size: self.size
             size: self.texture_size
-            size_hint: 0.2, 1
+            size_hint: 0.33, 1
             halign: 'center'
             valign: 'middle'
             on_press: root.clear_selected()
-        FlashButton:
-            id: save
-            text: 'save to file'
-            text_size: self.size
-            size: self.texture_size
-            size_hint: 0.2, 1
-            halign: 'center'
-            valign: 'middle'
-            on_press: self.delay(app.root.request_save_file)
-        FlashButton:
-            id: save
-            text: 'load file'
-            text_size: self.size
-            size: self.texture_size
-            size_hint: 0.2, 1
-            halign: 'center'
-            valign: 'middle'
-            on_press: self.delay(app.root.request_load_file)         
+      
 
 <StatBox>:
     BoxLayout:
@@ -357,13 +342,13 @@
                 pos_hint: {'x': 0.01, 'y': 0.9}
             NumberInput:
                 id:start_slider_text
-                text: str(int(start_slider.value))
+                text: '{:,}'.format(int(start_slider.value))
                 size_hint:0.3, 0.15
                 pos_hint: {'x': 0.2, 'y': 0.9}
                 on_number_val: root.assign_text_value('start')
             NumberInput:
                 id:stop_slider_text
-                text: str(int(stop_slider.value))
+                text: '{:,}'.format(int(stop_slider.value))
                 size_hint:0.3, 0.15
                 pos_hint: {'x': 0.6, 'y': 0.9}
                 on_number_val: root.assign_text_value('stop')

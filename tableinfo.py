@@ -65,7 +65,7 @@ def list_to_string(lst):
     tuple_list.append((start_at, current))
     def paren_negs(num):
         '''returns str(num) with parentethes around negative numbers'''
-        return '({})'.format(num) if num < 0 else str(num)
+        return '({:,})'.format(num) if num < 0 else '{:,}'.format(num)
     out_list = []
     for pair in tuple_list:
         if pair[0] == pair[1]:
