@@ -11,17 +11,64 @@ from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.dropdown import DropDown
-from kivy.properties import (NumericProperty, ListProperty, StringProperty,
+from kivy.properties import (NumericProperty, StringProperty,
                              BooleanProperty, ObjectProperty)
 from kivy.clock import Clock
 from kivy.uix.carousel import Carousel
-import dicestats as ds
-import tableinfo as ti
+import dicetables as dt
+import numpy as np
 from kivy.garden.graph import MeshLinePlot
-import file_handler as fh
+
+INTRO_TEXT = ('this is a platform for finding the probability of dice ' + 
+              'rolls for any set of dice. For example, the chance of ' +
+              'rolling a 4 with 3 six-sided dice is 3 out of 216.\n\n' +
+
+              'Swipe right ===> to get to the add box.  pick a die size, ' +
+              'and pick a number of dice to add. Add as many kinds of ' +
+              'dice as you want. You can also add a modifier to the die ' +
+              '(for example 3-sided die +4), or you can make the die a ' +
+              'weighted die (a 2-sided die with weights 1:3, 2:8 rolls ' +
+              'a \'one\'  3 times out of every 11 times).\n\n' +
+
+              'come back to this window to add or subtract ' +
+              'dice already added.\n\n' +
+
+              'The graph area is for getting a graph of the set of dice. ' +
+              'It records every set of dice that have been graphed and ' +
+              'you can reload those dice at any time.\n\n' +
+
+              'The stats area will give you the stats of any set of ' +
+              'rolls you choose. The last window gives you details of ' +
+              'the raw data.')
+
 
 #tools
-
+def check_data(plot_obj):
+    '''returns true if plot_obj has expectd value'''
+    expected = {'y_min':float, 'text':str, 'y_max':float, 'orig':list,
+                'x_max':int, 'x_min':int, 'pts':list, 'dice':list}
+    try:
+        for key, val_type in expected.items():
+            if not isinstance(plot_obj[key], val_type):
+                print key
+                return False
+    except KeyError as error:
+        print error
+        return False
+    for freq, val in plot_obj['orig']:
+        if (not isinstance(freq, int) or
+            not isinstance(val, (int, long))):
+            print 'bad orig', freq, val
+            return False
+    for x_pt, y_pt in plot_obj['pts']:
+        if not isinstance(x_pt, int) or not isinstance(y_pt, float):
+            print 'bad pts', x_pt, y_pt
+            return False
+    for die, num in plot_obj['dice']:
+        if not isinstance(die, dt.ProtoDie) or not isinstance(num, int):
+            print 'bad dice', die, num
+            return False
+    return True
 
 def main():
     '''gets the current diceplatform so all can call it'''
@@ -609,7 +656,7 @@ class AddBox(BoxLayout):
         self.mod = 0
         self.dictionary = {}
         self.die_size = 6
-        self.add_it = AddRmDice(ds.Die(6), size_hint=(1, 1))
+        self.add_it = AddRmDice(dt.Die(6), size_hint=(1, 1))
         self.add_it.assign_buttons(0, only_add=True)
     def initialize(self):
         '''how the box is packed'''
@@ -650,14 +697,14 @@ class AddBox(BoxLayout):
         '''all changes to size, mod and weight call this function'''
         if self.dictionary:
             if self.mod == 0:
-                die = ds.WeightedDie(self.dictionary)
+                die = dt.WeightedDie(self.dictionary)
             else:
-                die = ds.ModWeightedDie(self.dictionary, self.mod)
+                die = dt.ModWeightedDie(self.dictionary, self.mod)
         else:
             if self.mod == 0:
-                die = ds.Die(self.die_size)
+                die = dt.Die(self.die_size)
             else:
-                die = ds.ModDie(self.die_size, self.mod)
+                die = dt.ModDie(self.die_size, self.mod)
         self.add_it.assign_die(die)
         self.add_it.assign_buttons(0, only_add=True)
         self.add_it.flash_it()
@@ -700,7 +747,7 @@ class GraphBox(BoxLayout):
     and info updates. all calls are self.parent_app.request_something(*args).'''
     def __init__(self, **kwargs):
         super(GraphBox, self).__init__(**kwargs)
-        self.plot_history = []
+        self.plot_history = np.array([], dtype=object)
         self.plot_current = {'text':''}
     def initialize(self):
         '''called at main app init. workaround for .kv file loading before .py'''
@@ -748,7 +795,8 @@ class GraphBox(BoxLayout):
             
             if not new_plot_obj:
                 new_plot_obj = main().request_plot_object()
-                self.plot_history.insert(0, new_plot_obj)
+                self.plot_history = np.insert(self.plot_history, 0, new_plot_obj)
+                self.write_history()
             if new_plot_obj not in to_plot:
                 to_plot.insert(0, new_plot_obj)
         
@@ -759,7 +807,7 @@ class GraphBox(BoxLayout):
             plotter.open()
     def clear_all(self):
         '''clear graph history'''
-        self.plot_history = []
+        self.plot_history = np.array([], dtype=object)
         self.update()
     def clear_selected(self):
         '''clear selected checked items from graph history'''
@@ -767,12 +815,30 @@ class GraphBox(BoxLayout):
         for index in range(len(self.plot_history)):
             if not self.ids['graph_space'].children[index + 2].active:
                 new_history.append(self.plot_history[index])
-        self.plot_history = new_history[:]
+        self.plot_history = np.array(new_history[:], dtype=object)
         self.update()
     def write_history(self):
-        fh.write_history(self.plot_history)
+        np.save('numpytst', self.plot_history)
     def read_history(self):
-        msg, self.plot_history = fh.read_history()
+        try:
+            self.plot_history = np.load('numpytst.npy')
+            if self.plot_history.size:
+                msg = 'found it'
+            else:
+                msg = 'nope but there'
+            for plot_obj in self.plot_history:
+                if not check_data(plot_obj):
+                    self.plot_history = np.array([], dtype=object)
+                    msg = 'corrupted by checker'
+                    break
+            
+        except IOError:
+            self.plot_history = np.array([], dtype=object)
+            msg = 'nope'
+        except ValueError as e:
+            self.plot_history = np.array([], dtype=object)
+            msg = 'corrupted'
+            print e
         self.update()
         return msg
     
@@ -848,7 +914,7 @@ class DicePlatform(Carousel):
     '''the main box.  the parent_app.'''
     def __init__(self, **kwargs):
         super(DicePlatform, self).__init__(**kwargs)
-        self._table = ds.DiceTable()
+        self._table = dt.DiceTable()
         self.direction = 'right'
         self.loop = 'true'
         self.initializer()
@@ -876,18 +942,18 @@ class DicePlatform(Carousel):
                     'table_str': [str, (self._table,)],
                     'weights_info': [self._table.weights_info, ()],
                     'dice_list': [self._table.get_list, ()],
-                    'all_rolls': [ti.full_table_string, (self._table,)],
+                    'all_rolls': [dt.full_table_string, (self._table,)],
                     'tuple_list': [self._table.frequency_all, ()]}
         command, args = requests[request]
         return command(*args)
     def request_stats(self, stat_list):
         '''returns stat info from a list'''
-        return ti.stats(self._table, stat_list)
+        return dt.stats(self._table, stat_list)
     def request_plot_object(self):
         '''converts the table into a PlotObject'''
         new_object = {}
         new_object['text'] = str(self._table).replace('\n', ' \\ ')
-        graph_pts = ti.graph_pts(self._table, axes=False)
+        graph_pts = dt.graph_pts(self._table, axes=False)
         y_vals = [pts[1] for pts in graph_pts]
 
         new_object['x_min'], new_object['x_max'] = self._table.values_range()
@@ -900,7 +966,7 @@ class DicePlatform(Carousel):
 
     def request_reload(self, plot_obj):
         '''loads plot_obj as the main die table'''
-        self._table = ds.DiceTable()
+        self._table = dt.DiceTable()
         for die, number in plot_obj['dice']:
             self._table.update_list(number, die)
         self._table.add(1, plot_obj['orig'])
@@ -922,9 +988,11 @@ class DicePlatform(Carousel):
 
     def request_reset(self, *args):
         '''reset dice table'''
-        self._table = ds.DiceTable()
+        self._table = dt.DiceTable()
         self.updater()
-    
+        self.ids['change_box'].clear_widgets()
+        self.ids['change_box'].add_widget(Label(text=INTRO_TEXT, 
+            text_size=self.size, valign='top', halign='center'))
 
 # kv file line NONE
 class DiceCarouselApp(App):
@@ -934,37 +1002,17 @@ class DiceCarouselApp(App):
         return current_app
 
     def on_start(self):
-        text = ('this is a platform for finding the probability of dice ' + 
-                'rolls for any set of dice. For example, the chance of ' +
-                'rolling a 4 with 3 six-sided dice is 3 out of 216.\n\n' +
-
-                'Swipe right ===> to get to the add box.  pick a die size, ' +
-                'and pick a number of dice to add. Add as many kinds of ' +
-                'dice as you want. You can also add a modifier to the die ' +
-                '(for example 3-sided die +4), or you can make the die a ' +
-                'weighted die (a 2-sided die with weights 1:3, 2:8 rolls ' +
-                'a \'one\'  3 times out of every 11 times).\n\n' +
-                
-                'come back to this window to add or subtract ' +
-                'dice already added.\n\n' +
-
-                'The graph area is for getting a graph of the set of dice. ' +
-                'It records every set of dice that have been graphed and ' +
-                'you can reload those dice at any time.\n\n' +
-
-                'The stats area will give you the stats of any set of ' +
-                'rolls you choose. The last window gives you details of ' +
-                'the raw data.') 
+         
         msg = main().ids['graph_box'].read_history()
-        if msg == 'ok' and main().ids['graph_box'].plot_history:
-            hist_ok = ('IF YOU GO TO THE GRAPH AREA,\n'+
-                       'YOU\'LL FIND YOUR PREVIOUS HISTORY\n\n')
-            text = hist_ok + text
-        if msg == 'corrupted file':
-            hist_gone = ('TRIED TO LOAD HISTORY BUT\nTHE FILE HAD AN ERROR\n'+
-                         'whatcha gonna do about it?  cry?\n\n')
-            text = hist_gone + text
-        main().ids['change_box'].ids['intro'].text = text
+#        if msg == 'ok' and main().ids['graph_box'].plot_history:
+#            hist_ok = ('IF YOU GO TO THE GRAPH AREA,\n'+
+#                       'YOU\'LL FIND YOUR PREVIOUS HISTORY\n\n')
+#            text = hist_ok + text
+#        if msg == 'corrupted file':
+#            hist_gone = ('TRIED TO LOAD HISTORY BUT\nTHE FILE HAD AN ERROR\n'+
+#                         'whatcha gonna do about it?  cry?\n\n')
+#            text = hist_gone + text
+        main().ids['change_box'].ids['intro'].text = msg + '\n\n' + INTRO_TEXT
     def on_stop(self):
         main().ids['graph_box'].write_history()
     def on_pause(self):

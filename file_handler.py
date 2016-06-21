@@ -1,8 +1,8 @@
 '''for sending and retrieving main info to file'''
 
 import json
-import dicestats as ds
-import tableinfo as ti
+import dicetables as dt
+import numpy as np
 
 
 
@@ -24,16 +24,16 @@ def parse_dice(dice_lst):
             if 'Mod' in string:
                 mod_str = string.split('}')[1]
                 mod = int(mod_str[1:-1])
-                out.append((ds.ModWeightedDie(input_dic, mod), num))
+                out.append((dt.ModWeightedDie(input_dic, mod), num))
             else:
-                out.append((ds.WeightedDie(input_dic), num))
+                out.append((dt.WeightedDie(input_dic), num))
         else:
             numbers = string[string.find('(') + 1: string.find(')')]
             if 'Mod' in string:
                 size, mod = numbers.split(',')
-                out.append((ds.ModDie(int(size), int(mod)), num))
+                out.append((dt.ModDie(int(size), int(mod)), num))
             else:
-                out.append((ds.Die(int(numbers)), num))
+                out.append((dt.Die(int(numbers)), num))
     return out
 
 def make_table_basis(json_str):
@@ -46,7 +46,7 @@ def create_plot_object(table):
     '''converts the table into a PlotObject'''
     new_object = {}
     new_object['text'] = str(table).replace('\n', ' \\ ')
-    graph_pts = ti.graph_pts(table, axes=False)
+    graph_pts = dt.graph_pts(table, axes=False)
     y_vals = [pts[1] for pts in graph_pts]
 
     new_object['x_min'], new_object['x_max'] = table.values_range()
@@ -134,7 +134,64 @@ def read_table():
         return make_table_basis(json_string)    
     except IOError:
         return [[], [[0, 1]]]
-      
+        
+
+def check_plot_obj(plot_obj):
+    '''checks plot_obj to make sure it's gota ll the stuff'''
+    def check_data(plot_obj):
+    '''returns true if plot_obj has expectd value'''
+    expected = {'y_min':float, 'text':str, 'y_max':float, 'orig':list,
+                'x_max':int, 'x_min':int, 'pts':list, 'dice':list}
+    try:
+        for key, val_type in expected.items():
+            if not isinstance(plot_obj[key], val_type):
+                print key
+                return False
+    except KeyError as error:
+        print error
+        return False
+    for freq, val in plot_obj['orig']:
+        if (not isinstance(freq, int) or
+            not isinstance(val, (int, long))):
+            print 'bad orig', freq, val
+            return False
+    for x_pt, y_pt in plot_obj['pts']:
+        if not isinstance(x_pt, int) or not isinstance(y_pt, float):
+            print 'bad pts', x_pt, y_pt
+            return False
+    for die, num in plot_obj['dice']:
+        if not isinstance(die, dt.ProtoDie) or not isinstance(num, int):
+            print 'bad dice', die, num
+            return False
+    return True
+    
+def write_history_np(history):
+    '''takes a numpy array and writes it'''
+    np.save('numpytst', self.plot_history)
+
+def read_history_np():
+    '''tries to find the np file and read it returns a np array and a message'''
+    empty_hist = np.array([], dtype=object)
+    try:
+        history = np.load('numpytst.npy')
+        if history.size:
+            msg = 'found it'
+        else:
+            msg = 'nope but there'
+        for plot_obj in history:
+            if not check_data(plot_obj):
+                history = empty_hist
+                msg = 'corrupted by checker'
+                break
+    except IOError:
+        history = empty_hist
+        msg = 'nope'
+    except ValueError as e:
+        history = empty_hist
+        msg = 'corrupted'
+        print e
+
+    return msg, history  
     
         
 

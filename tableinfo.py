@@ -12,32 +12,37 @@ def scinote(num, dig_len=4):
     output unless the number is higher than 10**309.'''
     sci_power_cutoff = 7
     if num == 0:
-        return '0.0'
+        outpt = '0.0'
     #abs(numbers) less than one use the fixed point or exp to dig_len precision
     elif 0 < abs(num) < 1:
         exp = int('{0:.{1}e}'.format(num, dig_len - 1).split('e')[1])
         use_decimal = -3
         if exp < use_decimal:
-            return '{0:.{1}e}'.format(num, dig_len - 1)
+            outpt = '{0:.{1}e}'.format(num, dig_len - 1)
         else:
-            return '{0:.{1}f}'.format(num, dig_len - 1 - exp)
+            outpt = '{0:.{1}f}'.format(num, dig_len - 1 - exp)
     #1 <= abs(numbers) < sci_power_cutoff are appropriately rounded and comma-ed
     elif 1 <= abs(num) < 10**sci_power_cutoff:
         left = str(abs(num)).split('.')[0]
         int_digits = len(left)
         if dig_len > int_digits and isinstance(num, float):
-            num = float(round(num, dig_len - int_digits))
+            tick_over_tst = str(round(num, dig_len - int_digits))
+            if tick_over_tst[0] == '1' and str(num)[0] == '9':
+                int_digits += 1
+            outpt = '{0:,.{1}f}'.format(num, dig_len - int_digits)
         else:
             num = int(round(num, 0))
             #edge case workaround-else scinote(9.99e+6, 2) returns '10,000,000'
             if abs(num) == 10**sci_power_cutoff:
-                return '{0:.{1}e}'.format(num, dig_len - 1)
-        return '{:,}'.format(num)
+                outpt = '{0:.{1}e}'.format(num, dig_len - 1)
+            else:
+                outpt = '{:,}'.format(num)
     else:
         try:
-            return '{0:.{1}e}'.format(num, dig_len - 1)
+            outpt = '{0:.{1}e}'.format(num, dig_len - 1)
         except OverflowError:
-            return _long_note(num, dig_len)
+            outpt = _long_note(num, dig_len)
+    return outpt
 
 def _long_note(num, dig_len):
     '''converts long ints over +/-1e+308 to sci notation. helper to scinote'''
@@ -80,7 +85,7 @@ def list_to_string(lst):
 def full_table_string(table, zeroes=True):
     '''returns a string of the entire table with nicely formatted numbers'''
     min_val, max_val = table.values_range()
-    if zeroes and min_val:
+    if zeroes and table.values():
         the_pts = table.frequency_range(min_val, max_val + 1)
     else:
         the_pts = table.frequency_all()
