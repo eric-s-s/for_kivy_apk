@@ -1,6 +1,7 @@
 '''for sending and retrieving main info to file'''
 
 import json
+from cPickle import UnpicklingError
 import dicetables as dt
 import numpy as np
 
@@ -81,7 +82,7 @@ def make_plot_obj(plot_obj_dic):
         else:
             new[attr] = val
     return new
-    
+
 def make_history_json(history):
     '''takes a list of PlotObjects, converts to list of dictionary and returns
     a json  string'''
@@ -89,7 +90,7 @@ def make_history_json(history):
     for p_obj in history:
         new_list.append(make_plot_obj_dic(p_obj))
     return json.dumps(new_list, indent=2)
-    
+
 def make_history(json_string):
     '''takes a json string and converts to a list of PlotObjects'''
     to_convert = json.loads(json_string)
@@ -102,7 +103,7 @@ def write_history(history):
     '''takes a history and writes it to history.txt'''
     with open('history.txt', 'w') as f:
         f.write(make_history_json(history))
-        
+
 def read_history():
     '''returns a history from file or an empty list if no history. just in case,
     writes an empty list for if anything got corrupted'''
@@ -117,13 +118,13 @@ def read_history():
     except (TypeError, AttributeError, ValueError):
         write_history([])
         return ('corrupted file', [])
-    
-    
+
+
 def write_table(table):
     '''takes a table and writes to table.txt'''
     with open('table.txt', 'w') as f:
         f.write(make_table_json(table))
-        
+
 def read_table():
     '''returns a table from file or an empty table if no file. just in case,
     writes an empty table if anything got corrupted.'''
@@ -134,65 +135,69 @@ def read_table():
         return make_table_basis(json_string)    
     except IOError:
         return [[], [[0, 1]]]
-        
 
-def check_plot_obj(plot_obj):
-    '''checks plot_obj to make sure it's gota ll the stuff'''
-    def check_data(plot_obj):
-    '''returns true if plot_obj has expectd value'''
+
+def check_data(plot_obj):
+    '''checks history to see if plot_obj has expected data.  if ok, returns 'ok'
+    else returns a msg starting with 'error:' '''
     expected = {'y_min':float, 'text':str, 'y_max':float, 'orig':list,
-                'x_max':int, 'x_min':int, 'pts':list, 'dice':list}
+                'x_max':(int, long), 'x_min':(int, long), 'pts':list,
+                'dice':list}
+    if not isinstance(plot_obj, dict):
+        return 'error: not a dict'
     try:
         for key, val_type in expected.items():
             if not isinstance(plot_obj[key], val_type):
-                print key
-                return False
-    except KeyError as error:
-        print error
-        return False
+                return 'error: {} not {}'.format(key, val_type)
+    except KeyError:
+        return 'error: missing key'
+
     for freq, val in plot_obj['orig']:
-        if (not isinstance(freq, int) or
-            not isinstance(val, (int, long))):
-            print 'bad orig', freq, val
-            return False
+        if (not isinstance(freq, (int, long)) or
+                not isinstance(val, (int, long))):
+            return 'error: corrupted "orig"'
     for x_pt, y_pt in plot_obj['pts']:
-        if not isinstance(x_pt, int) or not isinstance(y_pt, float):
-            print 'bad pts', x_pt, y_pt
-            return False
+        if not isinstance(x_pt, (int, long)) or not isinstance(y_pt, float):
+            return 'error: corrupted "pts"'
     for die, num in plot_obj['dice']:
         if not isinstance(die, dt.ProtoDie) or not isinstance(num, int):
-            print 'bad dice', die, num
-            return False
-    return True
-    
+            return 'error: dicelist at ({!r}, {})'.format(die, num)
+    return 'ok'
+def check_history(history):
+    '''checks a history(a non-empty iterable containing plot_objects. to make
+    sure it has the correct kind of data. if ok, returns 'ok' else returns a msg
+    starting with 'error' '''
+    for plot_obj in history:
+        msg = check_data(plot_obj)
+        if 'error:' in msg:
+            break
+    return msg
+
 def write_history_np(history):
     '''takes a numpy array and writes it'''
-    np.save('numpytst', self.plot_history)
+    np.save('numpy_history', history)
 
 def read_history_np():
     '''tries to find the np file and read it returns a np array and a message'''
     empty_hist = np.array([], dtype=object)
     try:
-        history = np.load('numpytst.npy')
+        history = np.load('numpy_history.npy')
         if history.size:
-            msg = 'found it'
-        else:
-            msg = 'nope but there'
-        for plot_obj in history:
-            if not check_data(plot_obj):
+            msg = check_history(history)
+            if 'error:' in msg:
                 history = empty_hist
-                msg = 'corrupted by checker'
-                break
+        else:
+            if history.dtype != np.dtype('O'):
+                msg = 'error: wrong array type'
+                history = empty_hist
+            else:
+                msg = 'ok: no history'
     except IOError:
         history = empty_hist
-        msg = 'nope'
-    except ValueError as e:
+        msg = 'error: no file'
+    except (UnpicklingError, AttributeError, EOFError, ImportError,
+            IndexError):
         history = empty_hist
-        msg = 'corrupted'
-        print e
-
+        msg = 'error: file corrupted'
     return msg, history  
-    
-        
-
 

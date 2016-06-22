@@ -17,6 +17,7 @@ from kivy.clock import Clock
 from kivy.uix.carousel import Carousel
 import dicetables as dt
 import numpy as np
+import file_handler as fh
 from kivy.garden.graph import MeshLinePlot
 
 INTRO_TEXT = ('this is a platform for finding the probability of dice ' + 
@@ -40,41 +41,10 @@ INTRO_TEXT = ('this is a platform for finding the probability of dice ' +
               'The stats area will give you the stats of any set of ' +
               'rolls you choose. The last window gives you details of ' +
               'the raw data.')
-
-
 #tools
-def check_data(plot_obj):
-    '''returns true if plot_obj has expectd value'''
-    expected = {'y_min':float, 'text':str, 'y_max':float, 'orig':list,
-                'x_max':int, 'x_min':int, 'pts':list, 'dice':list}
-    try:
-        for key, val_type in expected.items():
-            if not isinstance(plot_obj[key], val_type):
-                print key
-                return False
-    except KeyError as error:
-        print error
-        return False
-    for freq, val in plot_obj['orig']:
-        if (not isinstance(freq, int) or
-            not isinstance(val, (int, long))):
-            print 'bad orig', freq, val
-            return False
-    for x_pt, y_pt in plot_obj['pts']:
-        if not isinstance(x_pt, int) or not isinstance(y_pt, float):
-            print 'bad pts', x_pt, y_pt
-            return False
-    for die, num in plot_obj['dice']:
-        if not isinstance(die, dt.ProtoDie) or not isinstance(num, int):
-            print 'bad dice', die, num
-            return False
-    return True
-
 def main():
     '''gets the current diceplatform so all can call it'''
     return App.get_running_app().root
-
-
 
 # kv file line NONE
 class FlashButton(Button):
@@ -749,6 +719,17 @@ class GraphBox(BoxLayout):
         super(GraphBox, self).__init__(**kwargs)
         self.plot_history = np.array([], dtype=object)
         self.plot_current = {'text':''}
+        self.confirm = Popup(title='Delete everything?', content=BoxLayout(), 
+                             size_hint=(0.3, 0.3), title_align='center',
+                             title_size=25)
+        self.confirm.content.add_widget(Button(text='EVERY\nTHING!!!',
+                                               on_press=self.clear_all, 
+                                               texture_size=self.size))
+        self.confirm.content.add_widget(Button(text='never mind',
+                                               on_press=self.confirm.dismiss))
+        
+        self.switch = True
+        
     def initialize(self):
         '''called at main app init. workaround for .kv file loading before .py'''
         self.ids['graph_space'].add_widget(PlotCheckBox(size_hint=(1, 0.5)))
@@ -766,7 +747,7 @@ class GraphBox(BoxLayout):
             self.ids['graph_space'].add_widget(check)
             check.two_line_text('\\')
 
-
+    
         self.ids['graph_space'].add_widget(Label(text='new table',
                                                  size_hint=(1, 0.1)))
         check = PlotCheckBox(size_hint=(1, 0.1), active=True,
@@ -802,11 +783,16 @@ class GraphBox(BoxLayout):
         
         self.update()
         if to_plot:
+            self.switch = not self.switch
+            if self.switch:
+                self.write_history()
+                print 'written'
             plotter = PlotPopup()
             plotter.add_list(to_plot)
             plotter.open()
-    def clear_all(self):
+    def clear_all(self, btn):
         '''clear graph history'''
+        self.confirm.dismiss()
         self.plot_history = np.array([], dtype=object)
         self.update()
     def clear_selected(self):
@@ -818,27 +804,9 @@ class GraphBox(BoxLayout):
         self.plot_history = np.array(new_history[:], dtype=object)
         self.update()
     def write_history(self):
-        np.save('numpytst', self.plot_history)
+        fh.write_history_np(self.plot_history)
     def read_history(self):
-        try:
-            self.plot_history = np.load('numpytst.npy')
-            if self.plot_history.size:
-                msg = 'found it'
-            else:
-                msg = 'nope but there'
-            for plot_obj in self.plot_history:
-                if not check_data(plot_obj):
-                    self.plot_history = np.array([], dtype=object)
-                    msg = 'corrupted by checker'
-                    break
-            
-        except IOError:
-            self.plot_history = np.array([], dtype=object)
-            msg = 'nope'
-        except ValueError as e:
-            self.plot_history = np.array([], dtype=object)
-            msg = 'corrupted'
-            print e
+        msg, self.plot_history = fh.read_history_np()
         self.update()
         return msg
     
