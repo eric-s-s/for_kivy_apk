@@ -151,18 +151,20 @@ def check_data(plot_obj):
                 return 'error: {} not {}'.format(key, val_type)
     except KeyError:
         return 'error: missing key'
-
+    msg = 'ok'
     for freq, val in plot_obj['orig']:
         if (not isinstance(freq, (int, long)) or
                 not isinstance(val, (int, long))):
-            return 'error: corrupted "orig"'
-    for x_pt, y_pt in plot_obj['pts']:
-        if not isinstance(x_pt, (int, long)) or not isinstance(y_pt, float):
-            return 'error: corrupted "pts"'
-    for die, num in plot_obj['dice']:
-        if not isinstance(die, dt.ProtoDie) or not isinstance(num, int):
-            return 'error: dicelist at ({!r}, {})'.format(die, num)
-    return 'ok'
+            msg = 'error: corrupted "orig"'
+    if msg == 'ok':
+        for x_pt, y_pt in plot_obj['pts']:
+            if not isinstance(x_pt, (int, long)) or not isinstance(y_pt, float):
+                msg = 'error: corrupted "pts"'
+    if msg == 'ok':
+        for die, num in plot_obj['dice']:
+            if not isinstance(die, dt.ProtoDie) or not isinstance(num, int):
+                msg = 'error: dicelist at ({!r}, {})'.format(die, num)
+    return msg
 def check_history(history):
     '''checks a history(a non-empty iterable containing plot_objects. to make
     sure it has the correct kind of data. if ok, returns 'ok' else returns a msg

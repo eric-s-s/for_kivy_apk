@@ -190,7 +190,7 @@
     BoxLayout:
         id: size_mod
         orientation: 'horizontal'
-        size_hint: 1, 0.4
+        size_hint: 1, 0.38
         GridLayout:
             id:presets
             rows: 2
@@ -225,9 +225,14 @@
                         Rectangle:
                             size:self.size
                             pos:self.pos
+    Label:
+        id: instructions
+        size_hint:1, 0.06
+        text: 'assign die size/weight/mod-----------------\n-------------------------add the assigned die'
+        halign: 'center'
     BoxLayout:
         id: add_it
-        size_hint:1, 0.25
+        size_hint:1, 0.21
 
 <InfoBox>:
     orientation:'vertical'

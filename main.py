@@ -125,7 +125,7 @@ class NumberInput(Button):
             if digit % 3 == 0:
                 pad.add_widget(Button(text=next(texts), size_hint=(0.1, 0.25),
                                       on_press=self.plus_minus))
-        pad.add_widget(Button(text='BS', size_hint=(0.29, 0.25),
+        pad.add_widget(Button(text='<-BS-', size_hint=(0.29, 0.25),
                               on_press=self.back_space))
         pad.add_widget(Button(text='0', size_hint=(0.29, 0.25),
                               on_press=self.add_digit))
@@ -720,15 +720,13 @@ class GraphBox(BoxLayout):
         self.plot_history = np.array([], dtype=object)
         self.plot_current = {'text':''}
         self.confirm = Popup(title='Delete everything?', content=BoxLayout(), 
-                             size_hint=(0.3, 0.3), title_align='center',
-                             title_size=25)
+                             size_hint=(0.8, 0.4), title_align='center',
+                             title_size=75)
         self.confirm.content.add_widget(Button(text='EVERY\nTHING!!!',
                                                on_press=self.clear_all, 
                                                texture_size=self.size))
-        self.confirm.content.add_widget(Button(text='never mind',
+        self.confirm.content.add_widget(Button(text='never\nmind',
                                                on_press=self.confirm.dismiss))
-        
-        self.switch = True
         
     def initialize(self):
         '''called at main app init. workaround for .kv file loading before .py'''
@@ -773,20 +771,16 @@ class GraphBox(BoxLayout):
             for plot_obj in self.plot_history:
                 if orig == plot_obj['orig'] and text == plot_obj['text']:
                     new_plot_obj = plot_obj.copy()
-            
+            #if plot_obj is still empty, get a new one.
             if not new_plot_obj:
                 new_plot_obj = main().request_plot_object()
                 self.plot_history = np.insert(self.plot_history, 0, new_plot_obj)
-                self.write_history()
+
             if new_plot_obj not in to_plot:
                 to_plot.insert(0, new_plot_obj)
         
         self.update()
         if to_plot:
-            self.switch = not self.switch
-            if self.switch:
-                self.write_history()
-                print 'written'
             plotter = PlotPopup()
             plotter.add_list(to_plot)
             plotter.open()
@@ -921,7 +915,7 @@ class DicePlatform(Carousel):
         '''converts the table into a PlotObject'''
         new_object = {}
         new_object['text'] = str(self._table).replace('\n', ' \\ ')
-        graph_pts = dt.graph_pts(self._table, axes=False)
+        graph_pts = dt.graph_pts(self._table, axes=False, exact=False)
         y_vals = [pts[1] for pts in graph_pts]
 
         new_object['x_min'], new_object['x_max'] = self._table.values_range()
@@ -970,17 +964,16 @@ class DiceCarouselApp(App):
         return current_app
 
     def on_start(self):
-         
+        header = '' 
         msg = main().ids['graph_box'].read_history()
-#        if msg == 'ok' and main().ids['graph_box'].plot_history:
-#            hist_ok = ('IF YOU GO TO THE GRAPH AREA,\n'+
-#                       'YOU\'LL FIND YOUR PREVIOUS HISTORY\n\n')
-#            text = hist_ok + text
-#        if msg == 'corrupted file':
-#            hist_gone = ('TRIED TO LOAD HISTORY BUT\nTHE FILE HAD AN ERROR\n'+
-#                         'whatcha gonna do about it?  cry?\n\n')
-#            text = hist_gone + text
-        main().ids['change_box'].ids['intro'].text = msg + '\n\n' + INTRO_TEXT
+        if msg == 'ok':
+            header = ('IF YOU GO TO THE GRAPH AREA,\n'+
+                       'YOU\'LL FIND YOUR PREVIOUS HISTORY\n\n')
+        if 'error' in msg and 'no file' not in msg:
+            header = ('TRIED TO LOAD HISTORY BUT\nTHE FILE HAD AN ERROR\n'+
+                         'whatcha gonna do about it?  cry?\n\n')
+
+        main().ids['change_box'].ids['intro'].text = header + INTRO_TEXT
     def on_stop(self):
         main().ids['graph_box'].write_history()
     def on_pause(self):
