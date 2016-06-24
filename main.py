@@ -2,6 +2,7 @@
 # pylint: disable=too-many-public-methods, maybe-no-member, super-on-old-class
 '''requires kivy and kivy garden graph'''
 from itertools import cycle as itertools_cycle
+from decimal import Decimal
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -910,7 +911,12 @@ class DicePlatform(Carousel):
         return command(*args)
     def request_stats(self, stat_list):
         '''returns stat info from a list'''
-        return dt.stats(self._table, stat_list)
+        stat_info = list(dt.stats(self._table, stat_list))
+        if stat_info[3] != 'infinity' and stat_info[4] == '0.0':
+            new_pct = str(100/Decimal(stat_info[3])).split('E')
+            stat_info[4] = '{:.3f}e{}'.format(float(new_pct[0]), new_pct[1])
+        return tuple(stat_info)
+            
     def request_plot_object(self):
         '''converts the table into a PlotObject'''
         new_object = {}
