@@ -127,8 +127,8 @@ class NumberInput(Button):
                               on_press=self.add_digit))
         pad.add_widget(Button(text='ENT', size_hint=(0.39, 0.25),
                               on_press=self.enter_val))
-        self.num_pad = Popup(title='', content=pad, size_hint=(0.4, 0.5),
-                             pos_hint={'x':0.3, 'y':0})
+        self.num_pad = Popup(title='', content=pad, size_hint=(0.8, 0.5),
+                             pos_hint={'x':0.1, 'y':0})
         self.text = ''
         self.background_color = (0.4, 0.2, 1.0, 0.8)
         self.bind(on_release=self.open_pad)
@@ -188,7 +188,7 @@ class NumberSelect(BoxLayout):
         self.the_range = range(start, stop + 1)
     def open_pad(self, *args):
         '''creates a popup pad and opens it'''
-        pad = SelectPad(self, size_hint=(0.4, 0.5), pos_hint={'x':0.3, 'y':0})
+        pad = SelectPad(self, size_hint=(0.8, 0.5), pos_hint={'x':0.1, 'y':0})
         pad.open()
     def get_values(self):
         '''gets info from numberselect for getting weights'''
@@ -446,6 +446,11 @@ class ChangeBox(GridLayout):
             new_height = min((self.height - reset.height) / len(button_list),
                              max_height)
         for labels, die_ in button_list:
+            temp = labels[:]
+            labels = []
+            for label in temp:
+                if '50' not in label or 'D' in label:
+                    labels.append(label)
             box = BoxLayout(size_hint=(0.8, None), height=new_height,
                             orientation='horizontal')
             self.add_widget(box)

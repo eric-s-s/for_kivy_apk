@@ -252,15 +252,16 @@
         id: text_shell
         orientation: 'horizontal'
         size_hint: 1, 0.89
+        canvas:
+            Color:
+                rgba: 0.4,0.8,0.8,0.3
+            Rectangle:
+                pos: self.pos
+                size: self.size
         Label:
-            canvas:
-                Color:
-                    rgba: 0.4,0.8,0.8,0.3
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
+            
             id:text_container
-            size_hint: 0.9, 1
+            size_hint: 0.8, 1
             text:''
             text_size: self.width, self.height
         Slider:
@@ -270,7 +271,7 @@
             max:1
             value: 1
             step:1
-            size_hint:0.1, 1
+            size_hint:0.2, 1
             on_value:root.parent_obj.choose(self, root.key)
             
 <InfoBox>:
