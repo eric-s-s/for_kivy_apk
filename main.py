@@ -697,13 +697,12 @@ class GraphBox(BoxLayout):
         if base_y > 0.1:
             base_y = 0.1
         sz_hint = (1, 1 - (rows - 1) * base_y)
-
         self.ids['graph_space'].clear_widgets()
         self.ids['graph_space'].add_widget(Label(text='past graphs',
                                                  halign='center',
                                                  size_hint=sz_hint))
         for text_, tuple_list_ in history:
-            check = PlotCheckBox(size_hint=(0.8, base_y), active=False,
+            check = PlotCheckBox(size_hint=(0.79, base_y), active=False,
                                  tuple_list=tuple_list_)
             reload_ = FlashButton(
                 size_hint=(0.2, base_y), lst=[text_, tuple_list_], max_lines=1,
