@@ -58,7 +58,8 @@ class FlashButton(Button):
     def __init__(self, delay_time=0.25, **kwargs):
         super(FlashButton, self).__init__(**kwargs)
         self.delay_time = delay_time
-
+        self._original_color = self.color
+        self._original_background = self.background_color
     def delay(self, function, *args):
         '''delays a function call so that button has time to flash.  use with
         on_press=self.delay(function, function_args)'''
@@ -71,9 +72,10 @@ class FlashButton(Button):
         Clock.schedule_once(self.callback, self.delay_time)
     def callback(self, delta_time):
         '''sets background to normal'''
-        self.color = [1, 1, 1, 1]
-        self.background_color = [1, 1, 1, 1]
-
+        #self.color = [1, 1, 1, 1]
+        #self.background_color = [1, 1, 1, 1]
+        self.color = self._original_color
+        self.background_color = self._original_background
 # kv file line NONE
 class FlashLabel(Button):
     '''a label that flashes for delay_time=0.5 sec when text is added by
@@ -272,57 +274,56 @@ class WeightsPopup(Popup):
 
 
 # kv file line NONE
-class ObjectButton(Button):
+class ListButton(Button):
     '''simply a button with an object attached'''
-    obj = ObjectProperty({})
+    lst = ListProperty([])
 # kv file line 22
 class PlotPopup(Popup):
     '''popup containing the graph'''
-    def __init__(self, **kwargs):
+    def __init__(self, x_range, y_range, plot_list, **kwargs):
         super(PlotPopup, self).__init__(**kwargs)
-        self._plot_list = []
+        self._plot_list = plot_list
+        self.x_range = list(x_range)
+        self.y_range = [0, y_range[1]] 
         self.legend = DropDown(dismiss_on_select=False)
+        
+        self._color_list = [
+            [0.2, 1.0, 0, 1], [1, 0, 0.2, 1], [0, 0.2, 1, 1],
+            [0.6, 0, 0.8, 1], [1, 0.4, 0.2, 1], [1, 0.8, 0, 1],
+            [0.8, 1.0, 0.1, 1]
+            ]
+        self.make_graph()
+        self.make_legend()
     def add_list(self, new_list):
         '''main funciton to make a graph'''
         self._plot_list = new_list[:]
         self.make_graph()
         self.make_legend()
+        
     def make_graph(self):
         '''makes a graph and plots'''
-        colors = itertools_cycle([
-            [0.2, 1.0, 0, 1], [1, 0, 0.2, 1], [0, 0.2, 1, 1],
-            [0.6, 0, 0.8, 1], [1, 0.4, 0.2, 1], [1, 0.8, 0, 1],
-            [0.8, 1.0, 0.1, 1]
-            ])
-        x_range = []
-        y_range = []
+        colors = itertools_cycle(self._color_list)
+        
+        
         y_ticks = [0.05, 0.1, 0.2, 0.5, 1, 5, 10]
         x_ticks = [1, 2, 5, 10, 20, 30, 50, 100, 200,
                    300, 500, 1000, 2000, 5000]
-        for plot_obj in self._plot_list:
-            plot_obj['color'] = next(colors)
-            self.ids['graph'].add_plot(MeshLinePlot(points=plot_obj['pts'],
-                                                    color=plot_obj['color']))
-            if x_range:
-                x_range[0] = min(x_range[0], plot_obj['x_min'])
-                x_range[1] = max(x_range[1], plot_obj['x_max'])
-            else:
-                x_range = [plot_obj['x_min'], plot_obj['x_max']]
-            if y_range:
-                y_range[1] = max(y_range[1], plot_obj['y_max'])
-            else:
-                y_range = [0, plot_obj['y_max']]
-        x_tick_num = (x_range[1]-x_range[0])/9.
+        for text, pts in self._plot_list:
+            color_ = next(colors)
+            self.ids['graph'].add_plot(MeshLinePlot(points=pts,
+                                                    color=color_))
+            
+        x_tick_num = (self.x_range[1]-self.x_range[0])/9.
         for tick in x_ticks:
             if x_tick_num < tick:
                 x_tick_num = tick
                 break
-        y_tick_num = (y_range[1]-y_range[0])/20.
+        y_tick_num = (self.y_range[1]-self.y_range[0])/20.
         for tick in y_ticks:
             if y_tick_num < tick:
                 y_tick_num = tick
                 break
-        x_range[0] -= x_range[0] % x_tick_num
+        self.x_range[0] -= self.x_range[0] % x_tick_num
         current = self.ids['graph'].font_size
         factor = 1.
         if x_tick_num > 49:
@@ -335,19 +336,20 @@ class PlotPopup(Popup):
         self.ids['graph'].font_size = int(factor * current)
         self.ids['graph'].x_ticks_major = x_tick_num
         self.ids['graph'].y_ticks_major = y_tick_num
-        self.ids['graph'].xmin = x_range[0]
+        self.ids['graph'].xmin = self.x_range[0]
         self.ids['graph'].ymin = -y_tick_num
-        self.ids['graph'].xmax = x_range[1]
-        self.ids['graph'].ymax = y_range[1]
+        self.ids['graph'].xmax = self.x_range[1]
+        self.ids['graph'].ymax = self.y_range[1]
 
     def make_legend(self):
         '''created the dropdown menu that's called by 'legend' button'''
-        for plot_obj in self._plot_list:
-
-            btn = ObjectButton(text=plot_obj['text'], size_hint=(None, None),
-                               height=80, obj=plot_obj, color=plot_obj['color'],
+        colors = itertools_cycle(self._color_list)
+        for text, pts in self._plot_list:
+            btn = ListButton(text=text, size_hint=(None, None),
+                               height=80, lst=pts, color=next(colors),
                                valign='middle')
-            btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
+            #btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
+            btn.bind(on_release=self.legend.select)
             self.legend.add_widget(btn)
         self.legend.on_select = self.flash_plot
         self.ids['legend'].bind(on_release=self.legend.open)
@@ -356,11 +358,12 @@ class PlotPopup(Popup):
     def shrink_button(self, event):
         '''make legend button small again after dismiss drop down'''
         self.ids['legend'].width = self.ids['legend'].texture_size[0]
+#TODO    
     def resize(self, *args):
         '''on release, resize drop down to fit widest button'''
         widths = [self.ids['legend'].texture_size[0]]
         for btn in self.legend.children[0].children:
-            raw_lines = (btn.texture_size[0] + 10.)/main().width
+            raw_lines = (btn.texture_size[0] + 10.)/self.parent.width
             single_line_ht = btn.texture_size[1]
             lines = int(raw_lines)
             if lines < raw_lines:
@@ -381,28 +384,28 @@ class PlotPopup(Popup):
             btn.height = max(self.ids['legend'].height, single_line_ht * lines)
             widths.append(btn.width)
         self.ids['legend'].width = max(widths)
-    def flash_plot(self, obj, second_time=False, flash_time=0.5):
+    def flash_plot(self, btn, second_time=False, flash_time=0.5):
         '''on press, highlight selected graph'''
         for plot in self.ids['graph'].plots:
-            if plot.points == obj['pts']:
+            if plot.points == btn.lst:
                 temp_color = [1, 1, 1, 1]
                 self.ids['graph'].remove_plot(plot)
-                new_plot = MeshLinePlot(points=obj['pts'], color=temp_color)
+                new_plot = MeshLinePlot(points=btn.lst, color=temp_color)
                 self.ids['graph'].add_plot(new_plot)
         if second_time:
             Clock.schedule_once(
-                lambda dt: self._callback(obj, flash_time, True),
+                lambda dt: self._callback(btn, flash_time, True),
                 flash_time)
         else:
-            Clock.schedule_once(lambda dt: self._callback(obj, flash_time),
+            Clock.schedule_once(lambda dt: self._callback(btn, flash_time),
                                 flash_time)
-    def _callback(self, obj, flash_time, second_time=False):
+    def _callback(self, btn, flash_time, second_time=False):
         '''resets graph to original color'''
         for plot in self.ids['graph'].plots:
-            if plot.points == obj['pts']:
-                plot.color = obj['color']
+            if plot.points == btn.lst:
+                plot.color = btn.color
         if not second_time:
-            Clock.schedule_once(lambda dt: self.flash_plot(obj, True),
+            Clock.schedule_once(lambda dt: self.flash_plot(btn, True),
                                 flash_time)
 
 # kv file line 51
@@ -544,9 +547,9 @@ class PageBox(BoxLayout):
         '''reset font_size = f_size,
         [title ratio, , slider ratio, button ratio, text ratio] = ratios'''
         self.ids['page_box_title'].size_hint_y = ratios[0]
-        self.ids['choose'].size_hint_y = ratios[1]
-        self.ids['buttons_container'].size_hint_y = ratios[2]
-        self.ids['text_container'].size_hint_y = ratios[3]
+        #self.ids['choose'].size_hint_y = ratios[1]
+        self.ids['buttons_container'].size_hint_y = ratios[1]
+        self.ids['text_shell'].size_hint_y = ratios[2]
     def set_title(self, title):
         '''title is a string. sets the title of the box.'''
         self.ids['page_box_title'].text = title
@@ -560,8 +563,11 @@ class PageBox(BoxLayout):
         self.ids['text_container'].text = page
         self.ids['text_container'].text_size = self.ids['text_container'].size
         self.ids['pages'].text = '{}/{}'.format(page_num, total_pages)
-        self.ids['choose'].value = page_num
+        #in order to reverse slider movement,the value used by slider (having
+        #the same max and min as the pages) is the opposite
+        slider_val = total_pages + 1 - page_num
         self.ids['choose'].max = total_pages
+        self.ids['choose'].value = slider_val
 class StatBox(BoxLayout):
     '''box for getting and displaying stats about rolls. parent app is what's
     called for dice actions and info updates. all calls are
@@ -611,14 +617,16 @@ class InfoBox(BoxLayout):
             'here are all the rolls and their frequency'
             )
         self.ids['full_text'].ids['page_box_title'].font_size *= 0.75
-        self.ids['weights_info'].reset_sizes([0.1, 0.07, 0.1, 0.73])
+        self.ids['weights_info'].reset_sizes([0.1, 0.1, 0.80])
         self.ids['weights_info'].set_title('full weight info')
-    def choose(self, value, key):
+    def choose(self, slider, key):
         '''chooses a page for pagebox with key=string-which box to display in.
         value=int-page number.'''
         lines = self.ids[key].get_lines_number()
-        self.ids[key].set_text(*self.view_model.display_chosen_page(value, key,
-                                                                    lines))
+        #reversing the slider
+        page = int(slider.max) + int(slider.min) - int(slider.value)
+        self.ids[key].set_text(*self.view_model.display_chosen_page(page,
+                                                                    key, lines))
     def previous(self, key):
         '''displays previous page and updates view for pagebox[key=string]'''
         lines = self.ids[key].get_lines_number()
@@ -736,15 +744,14 @@ class GraphBox(BoxLayout):
         plots = self.view_model.graph_it(to_plot)
         self.update()
         if plots[2]:
-            #plotter = PlotPopup()
+            plotter = PlotPopup(*plots)
             #plotter.add_list(to_plot)
-            #plotter.open()
+            plotter.open()
 
             #for line in plt.figure(1).axes[0].lines:
             #    if line.get_label() == 'hi':
             #        print line.get_ydata()
             #        line.set_zorder(10)
-            print plots
     def clear_all(self, btn):
         '''clear graph history'''
         self.confirm.dismiss()
@@ -782,7 +789,7 @@ class DicePlatform(Carousel):
         change = mvm.ChangeBox(table)
         add = mvm.AddBox(table)
         stat = mvm.StatBox(table)
-        graph = mvm.GraphBox(table, history, True)
+        graph = mvm.GraphBox(table, history, False)
         info = mvm.InfoBox(table)
         self.ids['change_box'].view_model = change
         self.ids['add_box'].view_model = add
