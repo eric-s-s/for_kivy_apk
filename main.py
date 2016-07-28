@@ -1,7 +1,8 @@
-# pylint: disable=no-member, unused-argument, no-name-in-module
-# pylint: disable=too-many-public-methods, maybe-no-member, super-on-old-class
+# pylint: disable=unused-argument, no-name-in-module, import-error
+# pylint: disable=super-on-old-class
 '''requires kivy and kivy garden graph'''
 from itertools import cycle as itertools_cycle
+
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -42,10 +43,6 @@ INTRO_TEXT = ('this is a platform for finding the probability of dice ' +
               'The stats area will give you the stats of any set of ' +
               'rolls you choose. The last window gives you details of ' +
               'the raw data.')
-#tools
-def main():
-    '''gets the current diceplatform so all can call it'''
-    return App.get_running_app().root
 
 # kv file line NONE
 class FlashButton(Button):
@@ -72,8 +69,6 @@ class FlashButton(Button):
         Clock.schedule_once(self.callback, self.delay_time)
     def callback(self, delta_time):
         '''sets background to normal'''
-        #self.color = [1, 1, 1, 1]
-        #self.background_color = [1, 1, 1, 1]
         self.color = self._original_color
         self.background_color = self._original_background
 # kv file line NONE
@@ -286,17 +281,11 @@ class PlotPopup(Popup):
         self.x_range = list(x_range)
         self.y_range = [0, y_range[1]] 
         self.legend = DropDown(dismiss_on_select=False)
-        
         self._color_list = [
             [0.2, 1.0, 0, 1], [1, 0, 0.2, 1], [0, 0.2, 1, 1],
             [0.6, 0, 0.8, 1], [1, 0.4, 0.2, 1], [1, 0.8, 0, 1],
             [0.8, 1.0, 0.1, 1]
             ]
-        self.make_graph()
-        self.make_legend()
-    def add_list(self, new_list):
-        '''main funciton to make a graph'''
-        self._plot_list = new_list[:]
         self.make_graph()
         self.make_legend()
         
@@ -308,9 +297,9 @@ class PlotPopup(Popup):
         y_ticks = [0.05, 0.1, 0.2, 0.5, 1, 5, 10]
         x_ticks = [1, 2, 5, 10, 20, 30, 50, 100, 200,
                    300, 500, 1000, 2000, 5000]
-        for text, pts in self._plot_list:
+        for text_pts in self._plot_list:
             color_ = next(colors)
-            self.ids['graph'].add_plot(MeshLinePlot(points=pts,
+            self.ids['graph'].add_plot(MeshLinePlot(points=text_pts[1],
                                                     color=color_))
             
         x_tick_num = (self.x_range[1]-self.x_range[0])/9.
@@ -348,7 +337,6 @@ class PlotPopup(Popup):
             btn = ListButton(text=text, size_hint=(None, None),
                                height=80, lst=pts, color=next(colors),
                                valign='middle')
-            #btn.bind(on_release=lambda btn: self.legend.select(btn.obj))
             btn.bind(on_release=self.legend.select)
             self.legend.add_widget(btn)
         self.legend.on_select = self.flash_plot
@@ -358,7 +346,6 @@ class PlotPopup(Popup):
     def shrink_button(self, event):
         '''make legend button small again after dismiss drop down'''
         self.ids['legend'].width = self.ids['legend'].texture_size[0]
-#TODO    
     def resize(self, *args):
         '''on release, resize drop down to fit widest button'''
         widths = [self.ids['legend'].texture_size[0]]
@@ -380,7 +367,7 @@ class PlotPopup(Popup):
             new_text_lst.append(copy)
             btn.text = '\n'.join(new_text_lst)
 
-            btn.width = min(btn.texture_size[0] + 10, main().width)
+            btn.width = min(btn.texture_size[0] + 10, self.parent.width)
             btn.height = max(self.ids['legend'].height, single_line_ht * lines)
             widths.append(btn.width)
         self.ids['legend'].width = max(widths)
@@ -388,13 +375,15 @@ class PlotPopup(Popup):
         '''on press, highlight selected graph'''
         for plot in self.ids['graph'].plots:
             if plot.points == btn.lst:
-                temp_color = [1, 1, 1, 1]
+                #temp_color = [1, 1, 1, 1]
+                temp_color = [1-val for val in btn.color]
+                temp_color[3] = 1
                 self.ids['graph'].remove_plot(plot)
                 new_plot = MeshLinePlot(points=btn.lst, color=temp_color)
                 self.ids['graph'].add_plot(new_plot)
         if second_time:
             Clock.schedule_once(
-                lambda dt: self._callback(btn, flash_time, True),
+                lambda dt: self._callback(btn, flash_time, second_time=True),
                 flash_time)
         else:
             Clock.schedule_once(lambda dt: self._callback(btn, flash_time),
@@ -469,7 +458,7 @@ class ChangeBox(GridLayout):
                     if label not in self.old_dice:
                         Clock.schedule_once(flash.flash_it, 0.01)
         self.old_dice = new_dice
-#
+
 # kv file line 154
 class AddBox(BoxLayout):
     '''box for adding new dice.  parent app is what's called for dice actions
@@ -552,7 +541,6 @@ class PageBox(BoxLayout):
         '''reset font_size = f_size,
         [title ratio, , slider ratio, button ratio, text ratio] = ratios'''
         self.ids['page_box_title'].size_hint_y = ratios[0]
-        #self.ids['choose'].size_hint_y = ratios[1]
         self.ids['buttons_container'].size_hint_y = ratios[1]
         self.ids['text_shell'].size_hint_y = ratios[2]
     def set_title(self, title):
@@ -586,9 +574,6 @@ class StatBox(BoxLayout):
         self.ids['stat_text'].text = stat_text
         self.ids['slider_1'].value = vals[0]
         self.ids['slider_2'].value = vals[1]
-        self.ids['slider_1_text'].text = '{:,}'.format(vals[0])
-        self.ids['slider_2_text'].text = '{:,}'.format(vals[1])
-
     def update(self):
         '''called when dice list changes.'''
         val_1 = int(self.ids['slider_1'].value)
@@ -596,15 +581,24 @@ class StatBox(BoxLayout):
         info_text, stat_text, vals, min_max = self.view_model.display(val_1,
                                                                       val_2)
         self.ids['info_text'].text = info_text
-        self.display_stats(stat_text, vals)
-        self.ids['slider_1'].min = self.ids['slider_2'].min = min_max[0]
         self.ids['slider_1'].max = self.ids['slider_2'].max = min_max[1]
+        self.ids['slider_1'].min = self.ids['slider_2'].min = min_max[0]
+        #increase step for better display speed on phone
+        #annoying kivy slider issue. if step to max is too small ( < step/2?)
+        #slider won't make the last step
+        range_ = min_max[1] - min_max[0]
+        step = range_ // 100 + 1
+        while range_ % step < step/2. and range_ % step != 0:
+            step += 1
+        self.ids['slider_1'].step = self.ids['slider_2'].step = step
+        self.display_stats(stat_text, vals)
     def assign_text_value(self):
         '''called by text_input to assign that value to sliders and
         show stats'''
         val_1 = int(self.ids['slider_1_text'].text.replace(',', ''))
         val_2 = int(self.ids['slider_2_text'].text.replace(',', ''))
-        self.display_stats(*self.view_model.display_stats(val_1, val_2))
+        self.ids['slider_1'].value = val_1
+        self.ids['slider_2'].value = val_2
     def assign_slider_value(self):
         '''the main function. displays stats of current slider values.'''
         val_1 = int(self.ids['slider_1'].value)
@@ -655,7 +649,6 @@ class InfoBox(BoxLayout):
 class PlotCheckBox(BoxLayout):
     '''a checkbox with associated label and function to return label if box
     checked'''
-    #parent_obj = ObjectProperty(BoxLayout)
     tuple_list = ObjectProperty([(0, 1)])
     text = StringProperty('')
     active = BooleanProperty(False)
@@ -750,13 +743,7 @@ class GraphBox(BoxLayout):
         self.update()
         if plots[2]:
             plotter = PlotPopup(*plots)
-            #plotter.add_list(to_plot)
             plotter.open()
-
-            #for line in plt.figure(1).axes[0].lines:
-            #    if line.get_label() == 'hi':
-            #        print line.get_ydata()
-            #        line.set_zorder(10)
     def clear_all(self, btn):
         '''clear graph history'''
         self.confirm.dismiss()
