@@ -175,8 +175,9 @@ class NumberInput(Button):
             self.changed = not self.changed
 
 
-###    AddBox classes   ###
+###############    AddBox classes   ###############
 #for weightpopup
+# kv file line 5
 class NumberSelect(BoxLayout):
     '''makes a grid of numbers to choose from'''
     def __init__(self, start, stop, **kwargs):
@@ -195,6 +196,7 @@ class NumberSelect(BoxLayout):
         self.ids['title'].text = title
         self.ids['number'].text = str(number)
 # for NumerberSelect
+# kv file line NONE
 class SelectPad(Popup):
     '''a popup that is called by NumberSelect.  creates a number pad of number
     choices.'''
@@ -219,6 +221,7 @@ class SelectPad(Popup):
         self.parent_btn.ids['number'].text = btn.text
         self.dismiss()
 #for AddBox.add_weights  and AddBox.record_weights
+# kv file line 19
 class WeightsPopup(Popup):
     '''the popup called when weighting a die'''
     def __init__(self, parent_obj, text_list, **kwargs):
@@ -270,7 +273,7 @@ class WeightsPopup(Popup):
                 out.append(child.get_values())
         self.parent_obj.record_weights(out)
         self.dismiss()
-# kv file line 154
+# kv file line 170
 class AddBox(BoxLayout):
     '''box for adding new dice.  parent app is what's called for dice actions
     and info updates. all calls are self.parent_app.request_something(*args).'''
@@ -340,8 +343,8 @@ class AddBox(BoxLayout):
         popup = WeightsPopup(self, self.view_model.get_weights_text())
         popup.open()
 
-###     ChangeBox has no extra classes      ###
-# kv file line 146
+###############     ChangeBox has no extra classes      ###############
+# kv file line 160
 class ChangeBox(GridLayout):
     '''displays current dice and allows to change. parent app is what's called
     for dice actions and info updates. all calls are
@@ -400,13 +403,14 @@ class ChangeBox(GridLayout):
         self.old_dice = new_dice
 
 
-###     GraphBox classes    ###
+###############     GraphBox classes    ###############
 # for PlotPopup legend
+# kv file line NONE
 class ListButton(Button):
     '''simply a button with an object attached'''
     lst = ListProperty([])
 #for GraphBox.graph_it()
-# kv file line 22
+# kv file line 32
 class PlotPopup(Popup):
     '''popup containing the graph'''
     def __init__(self, x_range, y_range, plot_list, **kwargs):
@@ -527,7 +531,7 @@ class PlotPopup(Popup):
             Clock.schedule_once(lambda dt: self.flash_plot(btn, True),
                                 flash_time)
 # for displaying history choices to graph
-# kv file line 253
+# kv file line 61
 class PlotCheckBox(BoxLayout):
     '''a checkbox with associated label and function to return label if box
     checked'''
@@ -550,6 +554,7 @@ class PlotCheckBox(BoxLayout):
             line_1 = text[:len(self.text)/2]
             line_2 = text[len(self.text)/2:].replace(split_char, '\n', 1)
             self.ids['label'].text = (line_1 + line_2)
+# kv file line 273
 class GraphBox(BoxLayout):
     '''buttons for making graphs.  parent app is what's called for dice actions
     and info updates. all calls are self.parent_app.request_something(*args).'''
@@ -646,7 +651,8 @@ class GraphBox(BoxLayout):
         return msg
 
 
-###     StatBox has no extra classes    ###
+###############     StatBox has no extra classes    ###############
+# kv file line 311
 class StatBox(BoxLayout):
     '''box for getting and displaying stats about rolls. parent app is what's
     called for dice actions and info updates. all calls are
@@ -692,9 +698,9 @@ class StatBox(BoxLayout):
         self.display_stats(*self.view_model.display_stats(val_1, val_2))
 
 
-###     InfoBox classes     ###
+###############     InfoBox classes     ###############
 #for InfoBox displays
-# kv file line 77
+# kv file line 87
 class PageBox(BoxLayout):
     '''a box to display pages and buttons and slider to move through them.
     parent_obj is the top-level owner of the box that it accepts changes from'''
@@ -726,7 +732,7 @@ class PageBox(BoxLayout):
         slider_val = total_pages + 1 - page_num
         self.ids['choose'].max = total_pages
         self.ids['choose'].value = slider_val
-# kv file line 231
+# kv file line 382
 class InfoBox(BoxLayout):
     '''displays basic info about the die.'''
     view_model = ObjectProperty(mvm.InfoBox(mvm.TableManager()))
@@ -771,7 +777,7 @@ class InfoBox(BoxLayout):
 
 
 
-# kv file line 362
+# kv file line 420
 class DicePlatform(Carousel):
     '''the main box.  the parent_app.'''
     def __init__(self, **kwargs):
