@@ -675,14 +675,6 @@ class StatBox(BoxLayout):
         self.ids['info_text'].text = info_text
         self.ids['slider_1'].max = self.ids['slider_2'].max = min_max[1]
         self.ids['slider_1'].min = self.ids['slider_2'].min = min_max[0]
-        #increase step for better display speed on phone
-        #annoying kivy slider issue. if step to max is too small ( < step/2?)
-        #slider won't make the last step
-        range_ = min_max[1] - min_max[0]
-        step = range_ // 100 + 1
-        while range_ % step < step/2. and range_ % step != 0:
-            step += 1
-        self.ids['slider_1'].step = self.ids['slider_2'].step = step
         self.display_stats(stat_text, vals)
     def assign_text_value(self):
         '''called by text_input to assign that value to sliders and
